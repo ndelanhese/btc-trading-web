@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { useTradingStore } from '@/lib/store';
-import { botAPI, tradingAPI } from '@/lib/api';
+import { useBotManagement, useAccountBalance, usePositions } from '@/lib/hooks';
 import { BotStatus } from './BotStatus';
 import { AccountBalance } from './AccountBalance';
 import { PositionsList } from './PositionsList';
@@ -36,79 +36,41 @@ export const Dashboard: React.FC = () => {
     setPositions
   } = useTradingStore();
   
-  const [loading, setLoading] = useState(false);
+  const { status: botStatusData, startBot, stopBot, isStarting, isStopping } = useBotManagement();
+  const { balance: accountBalanceData } = useAccountBalance();
+  const { positions: positionsData } = usePositions();
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
       return;
     }
-    
-    // Load initial data
-    loadDashboardData();
-    
-    // Set up polling for real-time updates
-    const interval = setInterval(loadDashboardData, 30000); // 30 seconds
-    
-    return () => clearInterval(interval);
   }, [isAuthenticated, router]);
 
-  const loadDashboardData = async () => {
-    try {
-      // Load bot status
-      const statusResponse = await botAPI.getStatus();
-      setBotStatus(statusResponse.data.status);
-      
-      // Load account balance
-      const balanceResponse = await tradingAPI.getAccountBalance();
-      setAccountBalance(balanceResponse.data);
-      
-      // Load positions
-      const positionsResponse = await tradingAPI.getPositions();
-      setPositions(positionsResponse.data);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
+  useEffect(() => {
+    if (botStatusData) {
+      setBotStatus((botStatusData.status as 'running' | 'stopped' | 'error') || 'stopped');
     }
+  }, [botStatusData, setBotStatus]);
+
+  useEffect(() => {
+    if (accountBalanceData) {
+      setAccountBalance(accountBalanceData);
+    }
+  }, [accountBalanceData, setAccountBalance]);
+
+  useEffect(() => {
+    if (positionsData) {
+      setPositions(positionsData);
+    }
+  }, [positionsData, setPositions]);
+
+  const handleStartBot = () => {
+    startBot();
   };
 
-  const handleStartBot = async () => {
-    setLoading(true);
-    try {
-      await botAPI.start();
-      setBotStatus('running');
-      toast({
-        title: "Success",
-        description: "Bot started successfully!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to start bot',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStopBot = async () => {
-    setLoading(true);
-    try {
-      await botAPI.stop();
-      setBotStatus('stopped');
-      toast({
-        title: "Success",
-        description: "Bot stopped successfully!",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to stop bot',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  const handleStopBot = () => {
+    stopBot();
   };
 
   const handleLogout = () => {
@@ -180,7 +142,7 @@ export const Dashboard: React.FC = () => {
                   <div className="flex space-x-2">
                     <Button
                       onClick={handleStartBot}
-                      disabled={loading || botStatus === 'running'}
+                      disabled={isStarting || botStatus === 'running'}
                       className="flex items-center space-x-2"
                     >
                       <Play className="h-4 w-4" />
@@ -189,7 +151,7 @@ export const Dashboard: React.FC = () => {
                     <Button
                       variant="destructive"
                       onClick={handleStopBot}
-                      disabled={loading || botStatus === 'stopped'}
+                      disabled={isStopping || botStatus === 'stopped'}
                       className="flex items-center space-x-2"
                     >
                       <Square className="h-4 w-4" />
@@ -216,7 +178,7 @@ export const Dashboard: React.FC = () => {
                 <CardTitle>Active Positions</CardTitle>
               </CardHeader>
               <CardContent>
-                <PositionsList positions={positions} onUpdate={loadDashboardData} />
+                <PositionsList positions={positions} onUpdate={() => {}} />
               </CardContent>
             </Card>
           </TabsContent>

@@ -1,114 +1,148 @@
-import axios from 'axios';
-import { useToast } from '@/hooks/use-toast';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Request interceptor to add auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Response interceptor to handle auth errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
+import { apiClient, handleApiResponse } from './api-client';
+import type {
+  User,
+  UserRegister,
+  UserLogin,
+  LoginResponse,
+  LNMarketsConfig,
+  MarginProtection,
+  TakeProfit,
+  EntryAutomation,
+  PriceAlert,
+  BotStatus,
+  AccountBalance,
+  Position,
+  ClosePositionRequest,
+  UpdateTakeProfitRequest,
+  UpdateStopLossRequest,
+  ApiResponse,
+  PaginatedResponse,
+} from './types';
 
 // Auth API
-export const authAPI = {
-  register: (data: { username: string; email: string; password: string }) =>
-    api.post('/api/auth/register', data),
-  login: (data: { username: string; password: string }) =>
-    api.post('/api/auth/login', data),
+export const authApi = {
+  login: async (data: UserLogin): Promise<LoginResponse> => {
+    const response = await apiClient.post('auth/login', { json: data });
+    return handleApiResponse<LoginResponse>(response);
+  },
+
+  register: async (data: UserRegister): Promise<ApiResponse<User>> => {
+    const response = await apiClient.post('auth/register', { json: data });
+    return handleApiResponse<ApiResponse<User>>(response);
+  },
 };
 
 // LN Markets Configuration API
-export const lnMarketsAPI = {
-  setConfig: (data: {
-    api_key: string;
-    secret_key: string;
-    passphrase: string;
-    is_testnet: boolean;
-  }) => api.post('/api/lnmarkets/config', data),
-  getConfig: () => api.get('/api/lnmarkets/config'),
+export const lnMarketsApi = {
+  getConfig: async (): Promise<LNMarketsConfig> => {
+    const response = await apiClient.get('lnmarkets/config');
+    return handleApiResponse<LNMarketsConfig>(response);
+  },
+
+  updateConfig: async (data: LNMarketsConfig): Promise<LNMarketsConfig> => {
+    const response = await apiClient.post('lnmarkets/config', { json: data });
+    return handleApiResponse<LNMarketsConfig>(response);
+  },
 };
 
 // Trading Configuration API
-export const tradingConfigAPI = {
+export const tradingConfigApi = {
   // Margin Protection
-  setMarginProtection: (data: {
-    is_enabled: boolean;
-    activation_distance: number;
-    new_liquidation_distance: number;
-  }) => api.post('/api/trading/margin-protection', data),
-  getMarginProtection: () => api.get('/api/trading/margin-protection'),
+  getMarginProtection: async (): Promise<MarginProtection> => {
+    const response = await apiClient.get('trading/margin-protection');
+    return handleApiResponse<MarginProtection>(response);
+  },
+
+  updateMarginProtection: async (data: MarginProtection): Promise<MarginProtection> => {
+    const response = await apiClient.post('trading/margin-protection', { json: data });
+    return handleApiResponse<MarginProtection>(response);
+  },
 
   // Take Profit
-  setTakeProfit: (data: {
-    is_enabled: boolean;
-    daily_percentage: number;
-  }) => api.post('/api/trading/take-profit', data),
-  getTakeProfit: () => api.get('/api/trading/take-profit'),
+  getTakeProfit: async (): Promise<TakeProfit> => {
+    const response = await apiClient.get('trading/take-profit');
+    return handleApiResponse<TakeProfit>(response);
+  },
+
+  updateTakeProfit: async (data: TakeProfit): Promise<TakeProfit> => {
+    const response = await apiClient.post('trading/take-profit', { json: data });
+    return handleApiResponse<TakeProfit>(response);
+  },
 
   // Entry Automation
-  setEntryAutomation: (data: {
-    is_enabled: boolean;
-    amount_per_order: number;
-    margin_per_order: number;
-    number_of_orders: number;
-    price_variation: number;
-    initial_price: number;
-    take_profit_per_order: number;
-    operation_type: string;
-    leverage: number;
-  }) => api.post('/api/trading/entry-automation', data),
-  getEntryAutomation: () => api.get('/api/trading/entry-automation'),
+  getEntryAutomation: async (): Promise<EntryAutomation> => {
+    const response = await apiClient.get('trading/entry-automation');
+    return handleApiResponse<EntryAutomation>(response);
+  },
+
+  updateEntryAutomation: async (data: EntryAutomation): Promise<EntryAutomation> => {
+    const response = await apiClient.post('trading/entry-automation', { json: data });
+    return handleApiResponse<EntryAutomation>(response);
+  },
 
   // Price Alert
-  setPriceAlert: (data: {
-    is_enabled: boolean;
-    min_price: number;
-    max_price: number;
-    check_interval: number;
-  }) => api.post('/api/trading/price-alert', data),
-  getPriceAlert: () => api.get('/api/trading/price-alert'),
+  getPriceAlert: async (): Promise<PriceAlert> => {
+    const response = await apiClient.get('trading/price-alert');
+    return handleApiResponse<PriceAlert>(response);
+  },
+
+  updatePriceAlert: async (data: PriceAlert): Promise<PriceAlert> => {
+    const response = await apiClient.post('trading/price-alert', { json: data });
+    return handleApiResponse<PriceAlert>(response);
+  },
 };
 
 // Bot Management API
-export const botAPI = {
-  start: () => api.post('/api/trading/bot/start'),
-  stop: () => api.post('/api/trading/bot/stop'),
-  getStatus: () => api.get('/api/trading/bot/status'),
+export const botApi = {
+  getStatus: async (): Promise<BotStatus> => {
+    const response = await apiClient.get('trading/bot/status');
+    return handleApiResponse<BotStatus>(response);
+  },
+
+  startBot: async (): Promise<ApiResponse<BotStatus>> => {
+    const response = await apiClient.post('trading/bot/start');
+    return handleApiResponse<ApiResponse<BotStatus>>(response);
+  },
+
+  stopBot: async (): Promise<ApiResponse<BotStatus>> => {
+    const response = await apiClient.post('trading/bot/stop');
+    return handleApiResponse<ApiResponse<BotStatus>>(response);
+  },
 };
 
-// Trading Operations API
-export const tradingAPI = {
-  getAccountBalance: () => api.get('/api/trading/account/balance'),
-  getPositions: () => api.get('/api/trading/positions'),
-  getPosition: (id: string) => api.get(`/api/trading/positions/${id}`),
-  closePosition: (id: string) => api.post(`/api/trading/positions/${id}/close`),
-  updateTakeProfit: (id: string, data: { price: number }) =>
-    api.post(`/api/trading/positions/${id}/take-profit`, data),
-  updateStopLoss: (id: string, data: { price: number }) =>
-    api.post(`/api/trading/positions/${id}/stop-loss`, data),
-};
+// Trading API
+export const tradingApi = {
+  getAccountBalance: async (): Promise<AccountBalance> => {
+    const response = await apiClient.get('trading/account/balance');
+    return handleApiResponse<AccountBalance>(response);
+  },
 
-export default api;
+  getPositions: async (): Promise<Position[]> => {
+    const response = await apiClient.get('trading/positions');
+    return handleApiResponse<Position[]>(response);
+  },
+
+  getPosition: async (id: string): Promise<Position> => {
+    const response = await apiClient.get(`trading/positions/${id}`);
+    return handleApiResponse<Position>(response);
+  },
+
+  closePosition: async (data: ClosePositionRequest): Promise<ApiResponse<Position>> => {
+    const response = await apiClient.post(`trading/positions/${data.id}/close`);
+    return handleApiResponse<ApiResponse<Position>>(response);
+  },
+
+  updateTakeProfit: async (data: UpdateTakeProfitRequest): Promise<ApiResponse<Position>> => {
+    const response = await apiClient.post(`trading/positions/${data.id}/take-profit`, {
+      json: { take_profit: data.take_profit },
+    });
+    return handleApiResponse<ApiResponse<Position>>(response);
+  },
+
+  updateStopLoss: async (data: UpdateStopLossRequest): Promise<ApiResponse<Position>> => {
+    const response = await apiClient.post(`trading/positions/${data.id}/stop-loss`, {
+      json: { stop_loss: data.stop_loss },
+    });
+    return handleApiResponse<ApiResponse<Position>>(response);
+  },
+};

@@ -8,14 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { lnMarketsAPI } from '@/lib/api';
+import { useLNMarketsConfig } from '@/lib/hooks';
 import { useTradingStore } from '@/lib/store';
 
 export const LNMarketsConfig: React.FC = () => {
-  const [loading, setLoading] = useState(false);
-  const [config, setConfig] = useState<any>(null);
   const { setLNMarketsConfig } = useTradingStore();
   const { toast } = useToast();
+  const { config, isLoading, updateConfig, isUpdating } = useLNMarketsConfig();
 
   const {
     register,
@@ -25,39 +24,18 @@ export const LNMarketsConfig: React.FC = () => {
   } = useForm();
 
   useEffect(() => {
-    loadConfig();
-  }, []);
-
-  const loadConfig = async () => {
-    try {
-      const response = await lnMarketsAPI.getConfig();
-      setConfig(response.data);
-      reset(response.data);
-      setLNMarketsConfig(response.data);
-    } catch (error) {
-      console.error('Error loading LN Markets config:', error);
+    if (config) {
+      reset(config);
+      setLNMarketsConfig(config);
     }
-  };
+  }, [config, reset, setLNMarketsConfig]);
 
   const onSubmit = async (data: any) => {
-    setLoading(true);
-    try {
-      const response = await lnMarketsAPI.setConfig(data);
-      setConfig(response.data);
-      setLNMarketsConfig(response.data);
-      toast({
-        title: "Success",
-        description: "LN Markets configuration updated successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to update LN Markets configuration',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    updateConfig(data, {
+      onSuccess: (response: any) => {
+        setLNMarketsConfig(response);
+      },
+    });
   };
 
   return (
@@ -115,8 +93,8 @@ export const LNMarketsConfig: React.FC = () => {
               <Label htmlFor="testnet">Use Testnet</Label>
             </div>
             
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Configuration"}
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? "Saving..." : "Save Configuration"}
             </Button>
           </form>
         </CardContent>

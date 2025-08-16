@@ -9,13 +9,22 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { tradingConfigAPI } from '@/lib/api';
+import { 
+  useMarginProtection, 
+  useTakeProfit, 
+  useEntryAutomation, 
+  usePriceAlert 
+} from '@/lib/hooks';
 import { useTradingStore } from '@/lib/store';
 
 export const TradingConfig: React.FC = () => {
-  const [loading, setLoading] = useState(false);
   const { setMarginProtection, setTakeProfit, setEntryAutomation, setPriceAlert } = useTradingStore();
   const { toast } = useToast();
+  
+  const { config: marginConfig, updateConfig: updateMargin, isUpdating: isUpdatingMargin } = useMarginProtection();
+  const { config: takeProfitConfig, updateConfig: updateTakeProfit, isUpdating: isUpdatingTakeProfit } = useTakeProfit();
+  const { config: entryConfig, updateConfig: updateEntry, isUpdating: isUpdatingEntry } = useEntryAutomation();
+  const { config: alertConfig, updateConfig: updateAlert, isUpdating: isUpdatingAlert } = usePriceAlert();
 
   const {
     register: registerMargin,
@@ -50,113 +59,63 @@ export const TradingConfig: React.FC = () => {
   } = useForm();
 
   useEffect(() => {
-    loadConfigurations();
-  }, []);
-
-  const loadConfigurations = async () => {
-    try {
-      // Load all configurations
-      const [marginRes, takeProfitRes, entryRes, alertRes] = await Promise.all([
-        tradingConfigAPI.getMarginProtection(),
-        tradingConfigAPI.getTakeProfit(),
-        tradingConfigAPI.getEntryAutomation(),
-        tradingConfigAPI.getPriceAlert(),
-      ]);
-
-      // Reset forms with current values
-      resetMargin(marginRes.data);
-      resetTakeProfit(takeProfitRes.data);
-      resetEntry(entryRes.data);
-      resetAlert(alertRes.data);
-
-      // Update store
-      setMarginProtection(marginRes.data);
-      setTakeProfit(takeProfitRes.data);
-      setEntryAutomation(entryRes.data);
-      setPriceAlert(alertRes.data);
-    } catch (error) {
-      console.error('Error loading configurations:', error);
+    if (marginConfig) {
+      resetMargin(marginConfig);
+      setMarginProtection(marginConfig);
     }
-  };
+  }, [marginConfig, resetMargin, setMarginProtection]);
+
+  useEffect(() => {
+    if (takeProfitConfig) {
+      resetTakeProfit(takeProfitConfig);
+      setTakeProfit(takeProfitConfig);
+    }
+  }, [takeProfitConfig, resetTakeProfit, setTakeProfit]);
+
+  useEffect(() => {
+    if (entryConfig) {
+      resetEntry(entryConfig);
+      setEntryAutomation(entryConfig);
+    }
+  }, [entryConfig, resetEntry, setEntryAutomation]);
+
+  useEffect(() => {
+    if (alertConfig) {
+      resetAlert(alertConfig);
+      setPriceAlert(alertConfig);
+    }
+  }, [alertConfig, resetAlert, setPriceAlert]);
 
   const onSubmitMargin = async (data: any) => {
-    setLoading(true);
-    try {
-      const response = await tradingConfigAPI.setMarginProtection(data);
-      setMarginProtection(response.data);
-      toast({
-        title: "Success",
-        description: "Margin protection updated successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to update margin protection',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    updateMargin(data, {
+      onSuccess: (response: any) => {
+        setMarginProtection(response);
+      },
+    });
   };
 
   const onSubmitTakeProfit = async (data: any) => {
-    setLoading(true);
-    try {
-      const response = await tradingConfigAPI.setTakeProfit(data);
-      setTakeProfit(response.data);
-      toast({
-        title: "Success",
-        description: "Take profit settings updated successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to update take profit settings',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    updateTakeProfit(data, {
+      onSuccess: (response: any) => {
+        setTakeProfit(response);
+      },
+    });
   };
 
   const onSubmitEntry = async (data: any) => {
-    setLoading(true);
-    try {
-      const response = await tradingConfigAPI.setEntryAutomation(data);
-      setEntryAutomation(response.data);
-      toast({
-        title: "Success",
-        description: "Entry automation updated successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to update entry automation',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    updateEntry(data, {
+      onSuccess: (response: any) => {
+        setEntryAutomation(response);
+      },
+    });
   };
 
   const onSubmitAlert = async (data: any) => {
-    setLoading(true);
-    try {
-      const response = await tradingConfigAPI.setPriceAlert(data);
-      setPriceAlert(response.data);
-      toast({
-        title: "Success",
-        description: "Price alert updated successfully",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to update price alert',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    updateAlert(data, {
+      onSuccess: (response: any) => {
+        setPriceAlert(response);
+      },
+    });
   };
 
   return (
@@ -214,8 +173,8 @@ export const TradingConfig: React.FC = () => {
               </div>
             </div>
             
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Margin Protection"}
+            <Button type="submit" disabled={isUpdatingMargin}>
+              {isUpdatingMargin ? "Saving..." : "Save Margin Protection"}
             </Button>
           </form>
         </CardContent>
@@ -254,8 +213,8 @@ export const TradingConfig: React.FC = () => {
               <p className="text-sm text-muted-foreground">Daily percentage increase for take profit</p>
             </div>
             
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Take Profit Settings"}
+            <Button type="submit" disabled={isUpdatingTakeProfit}>
+              {isUpdatingTakeProfit ? "Saving..." : "Save Take Profit Settings"}
             </Button>
           </form>
         </CardContent>
@@ -410,8 +369,8 @@ export const TradingConfig: React.FC = () => {
               </div>
             </div>
             
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Entry Automation"}
+            <Button type="submit" disabled={isUpdatingEntry}>
+              {isUpdatingEntry ? "Saving..." : "Save Entry Automation"}
             </Button>
           </form>
         </CardContent>
@@ -484,8 +443,8 @@ export const TradingConfig: React.FC = () => {
               </div>
             </div>
             
-            <Button type="submit" disabled={loading}>
-              {loading ? "Saving..." : "Save Price Alert"}
+            <Button type="submit" disabled={isUpdatingAlert}>
+              {isUpdatingAlert ? "Saving..." : "Save Price Alert"}
             </Button>
           </form>
         </CardContent>

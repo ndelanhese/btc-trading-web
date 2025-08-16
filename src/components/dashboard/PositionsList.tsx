@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { tradingAPI } from '@/lib/api';
+import { usePositionOperations } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
 import { TrendingUp, TrendingDown, X, Edit } from 'lucide-react';
 
@@ -17,6 +17,7 @@ export const PositionsList: React.FC<PositionsListProps> = ({ positions, onUpdat
   const [takeProfitPrice, setTakeProfitPrice] = useState('');
   const [stopLossPrice, setStopLossPrice] = useState('');
   const { toast } = useToast();
+  const { closePosition, updateTakeProfit, updateStopLoss, isClosing, isUpdatingTakeProfit, isUpdatingStopLoss } = usePositionOperations();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -33,59 +34,32 @@ export const PositionsList: React.FC<PositionsListProps> = ({ positions, onUpdat
     }).format(num);
   };
 
-  const handleClosePosition = async (positionId: string) => {
-    try {
-      await tradingAPI.closePosition(positionId);
-      toast({
-        title: "Success",
-        description: "Position closed successfully",
-      });
-      onUpdate();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to close position',
-        variant: "destructive",
-      });
-    }
+  const handleClosePosition = (positionId: string) => {
+    closePosition({ id: positionId }, {
+      onSuccess: () => {
+        onUpdate();
+      },
+    });
   };
 
-  const handleUpdateTakeProfit = async (positionId: string) => {
-    try {
-      await tradingAPI.updateTakeProfit(positionId, { price: parseFloat(takeProfitPrice) });
-      toast({
-        title: "Success",
-        description: "Take profit updated successfully",
-      });
-      setEditingPosition(null);
-      setTakeProfitPrice('');
-      onUpdate();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to update take profit',
-        variant: "destructive",
-      });
-    }
+  const handleUpdateTakeProfit = (positionId: string) => {
+    updateTakeProfit({ id: positionId, take_profit: parseFloat(takeProfitPrice) }, {
+      onSuccess: () => {
+        setEditingPosition(null);
+        setTakeProfitPrice('');
+        onUpdate();
+      },
+    });
   };
 
-  const handleUpdateStopLoss = async (positionId: string) => {
-    try {
-      await tradingAPI.updateStopLoss(positionId, { price: parseFloat(stopLossPrice) });
-      toast({
-        title: "Success",
-        description: "Stop loss updated successfully",
-      });
-      setEditingPosition(null);
-      setStopLossPrice('');
-      onUpdate();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Failed to update stop loss',
-        variant: "destructive",
-      });
-    }
+  const handleUpdateStopLoss = (positionId: string) => {
+    updateStopLoss({ id: positionId, stop_loss: parseFloat(stopLossPrice) }, {
+      onSuccess: () => {
+        setEditingPosition(null);
+        setStopLossPrice('');
+        onUpdate();
+      },
+    });
   };
 
   if (!positions || positions.length === 0) {
@@ -151,8 +125,9 @@ export const PositionsList: React.FC<PositionsListProps> = ({ positions, onUpdat
                     <Button
                       size="sm"
                       onClick={() => handleUpdateTakeProfit(position.id)}
+                      disabled={isUpdatingTakeProfit}
                     >
-                      Save
+                      {isUpdatingTakeProfit ? "Saving..." : "Save"}
                     </Button>
                     <Button
                       variant="outline"
@@ -188,8 +163,9 @@ export const PositionsList: React.FC<PositionsListProps> = ({ positions, onUpdat
                     <Button
                       size="sm"
                       onClick={() => handleUpdateStopLoss(position.id)}
+                      disabled={isUpdatingStopLoss}
                     >
-                      Save
+                      {isUpdatingStopLoss ? "Saving..." : "Save"}
                     </Button>
                     <Button
                       variant="outline"
@@ -217,9 +193,10 @@ export const PositionsList: React.FC<PositionsListProps> = ({ positions, onUpdat
                   variant="destructive"
                   size="sm"
                   onClick={() => handleClosePosition(position.id)}
+                  disabled={isClosing}
                 >
                   <X className="h-4 w-4 mr-1" />
-                  Close
+                  {isClosing ? "Closing..." : "Close"}
                 </Button>
               </TableCell>
             </TableRow>

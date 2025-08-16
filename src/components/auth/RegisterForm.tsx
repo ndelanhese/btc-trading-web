@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { authAPI } from '@/lib/api';
+import { useAuth } from '@/lib/hooks';
+import Link from 'next/link';
 
 interface RegisterFormData {
   username: string;
@@ -18,9 +19,9 @@ interface RegisterFormData {
 }
 
 export const RegisterForm: React.FC = () => {
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { register: registerUser, isRegistering } = useAuth();
 
   const {
     register,
@@ -32,29 +33,19 @@ export const RegisterForm: React.FC = () => {
   const password = watch('password');
 
   const onSubmit = async (data: RegisterFormData) => {
-    setLoading(true);
-    try {
-      await authAPI.register({
-        username: data.username,
-        email: data.email,
-        password: data.password,
-      });
-      
-      toast({
-        title: "Success",
-        description: "Registration successful! Please log in.",
-      });
-      router.push('/login');
-    } catch (error: any) {
-      console.log(error);
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || 'Registration failed',
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    registerUser({
+      username: data.username,
+      email: data.email,
+      password: data.password,
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: "Registration successful! Please log in.",
+        });
+        router.push('/login');
+      },
+    });
   };
 
   return (
@@ -66,12 +57,12 @@ export const RegisterForm: React.FC = () => {
           </h2>
           <p className="text-muted-foreground mt-2">
             Or{' '}
-            <button
-              onClick={() => router.push('/login')}
-              className="font-medium text-primary hover:text-primary/80 underline underline-offset-4"
+            <Link
+              href="/login"
+              className="font-medium text-primary hover:text-primary/80 underline underline-offset-4 cursor-pointer"
             >
               sign in to your existing account
-            </button>
+            </Link>
           </p>
         </div>
         
@@ -150,10 +141,10 @@ export const RegisterForm: React.FC = () => {
               
               <Button
                 type="submit"
-                disabled={loading}
+                disabled={isRegistering}
                 className="w-full"
               >
-                {loading ? "Creating account..." : "Create account"}
+                {isRegistering ? "Creating account..." : "Create account"}
               </Button>
             </form>
           </CardContent>
