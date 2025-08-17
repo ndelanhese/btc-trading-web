@@ -35,7 +35,45 @@ export interface LNMarketsConfig {
   updated_at?: string;
 }
 
-// Trading Configuration types
+// Request types for API calls (without auto-generated fields)
+export interface LNMarketsConfigRequest {
+  api_key: string;
+  secret_key: string;
+  passphrase: string;
+  is_testnet: boolean;
+}
+
+export interface MarginProtectionRequest {
+  is_enabled: boolean;
+  activation_distance: number;
+  new_liquidation_distance: number;
+}
+
+export interface TakeProfitRequest {
+  is_enabled: boolean;
+  daily_percentage: number;
+}
+
+export interface EntryAutomationRequest {
+  is_enabled: boolean;
+  amount_per_order: number;
+  margin_per_order: number;
+  number_of_orders: number;
+  price_variation: number;
+  initial_price: number;
+  take_profit_per_order: number;
+  operation_type: string;
+  leverage: number;
+}
+
+export interface PriceAlertRequest {
+  is_enabled: boolean;
+  min_price: number;
+  max_price: number;
+  check_interval: number;
+}
+
+// Trading Configuration types (for responses)
 export interface MarginProtection {
   id?: number;
   user_id?: number;
@@ -50,7 +88,8 @@ export interface TakeProfit {
   id?: number;
   user_id?: number;
   is_enabled?: boolean;
-  percentage?: number;
+  daily_percentage?: number;
+  last_update?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -59,8 +98,15 @@ export interface EntryAutomation {
   id?: number;
   user_id?: number;
   is_enabled?: boolean;
-  strategy?: string;
-  parameters?: Record<string, any>;
+  amount_per_order?: number;
+  margin_per_order?: number;
+  number_of_orders?: number;
+  filled_slots?: number;
+  price_variation?: number;
+  initial_price?: number;
+  take_profit_per_order?: number;
+  operation_type?: string;
+  leverage?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -69,8 +115,10 @@ export interface PriceAlert {
   id?: number;
   user_id?: number;
   is_enabled?: boolean;
-  price_threshold?: number;
-  alert_type?: 'above' | 'below';
+  min_price?: number;
+  max_price?: number;
+  check_interval?: number;
+  last_alert?: string;
   created_at?: string;
   updated_at?: string;
 }

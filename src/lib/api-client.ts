@@ -52,6 +52,6 @@ export const handleApiResponse = async <T>(response: Response): Promise<T> => {
 };
 
 // Helper function to create query keys
-export const createQueryKey = (endpoint: string, params?: any) => {
+export const createQueryKey = (endpoint: string, params?: Record<string, unknown>) => {
   return [endpoint, params];
 };

@@ -16,6 +16,12 @@ import {
   usePriceAlert 
 } from '@/lib/hooks';
 import { useTradingStore } from '@/lib/store';
+import type { 
+  MarginProtectionRequest, 
+  TakeProfitRequest, 
+  EntryAutomationRequest, 
+  PriceAlertRequest 
+} from '@/lib/types';
 
 export const TradingConfig: React.FC = () => {
   const { setMarginProtection, setTakeProfit, setEntryAutomation, setPriceAlert } = useTradingStore();
@@ -87,7 +93,13 @@ export const TradingConfig: React.FC = () => {
   }, [alertConfig, resetAlert, setPriceAlert]);
 
   const onSubmitMargin = async (data: any) => {
-    updateMargin(data, {
+    const body: MarginProtectionRequest = {
+      is_enabled: data.is_enabled,
+      activation_distance: parseFloat(data.activation_distance),
+      new_liquidation_distance: parseFloat(data.new_liquidation_distance),
+    };
+    
+    updateMargin(body, {
       onSuccess: (response: any) => {
         setMarginProtection(response);
       },
@@ -95,7 +107,12 @@ export const TradingConfig: React.FC = () => {
   };
 
   const onSubmitTakeProfit = async (data: any) => {
-    updateTakeProfit(data, {
+    const body: TakeProfitRequest = {
+      is_enabled: data.is_enabled,
+      daily_percentage: parseFloat(data.daily_percentage),
+    };
+    
+    updateTakeProfit(body, {
       onSuccess: (response: any) => {
         setTakeProfit(response);
       },
@@ -103,7 +120,19 @@ export const TradingConfig: React.FC = () => {
   };
 
   const onSubmitEntry = async (data: any) => {
-    updateEntry(data, {
+    const body: EntryAutomationRequest = {
+      is_enabled: data.is_enabled,
+      amount_per_order: parseFloat(data.amount_per_order),
+      margin_per_order: parseInt(data.margin_per_order),
+      number_of_orders: parseInt(data.number_of_orders),
+      price_variation: parseFloat(data.price_variation),
+      initial_price: parseFloat(data.initial_price),
+      take_profit_per_order: parseFloat(data.take_profit_per_order),
+      operation_type: data.operation_type,
+      leverage: parseInt(data.leverage),
+    };
+    
+    updateEntry(body, {
       onSuccess: (response: any) => {
         setEntryAutomation(response);
       },
@@ -111,7 +140,14 @@ export const TradingConfig: React.FC = () => {
   };
 
   const onSubmitAlert = async (data: any) => {
-    updateAlert(data, {
+    const body: PriceAlertRequest = {
+      is_enabled: data.is_enabled,
+      min_price: parseFloat(data.min_price),
+      max_price: parseFloat(data.max_price),
+      check_interval: parseInt(data.check_interval),
+    };
+    
+    updateAlert(body, {
       onSuccess: (response: any) => {
         setPriceAlert(response);
       },

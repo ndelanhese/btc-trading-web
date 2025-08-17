@@ -7,14 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
 import { useLNMarketsConfig } from '@/lib/hooks';
-import { useTradingStore } from '@/lib/store';
+import { useAuthStore, useTradingStore } from '@/lib/store';
+import type { LNMarketsConfigRequest } from '@/lib/types';
 
 export const LNMarketsConfig: React.FC = () => {
   const { setLNMarketsConfig } = useTradingStore();
-  const { toast } = useToast();
-  const { config, isLoading, updateConfig, isUpdating } = useLNMarketsConfig();
+  const { user } = useAuthStore();
+  const { config, updateConfig, isUpdating } = useLNMarketsConfig();
 
   const {
     register,
@@ -31,7 +31,14 @@ export const LNMarketsConfig: React.FC = () => {
   }, [config, reset, setLNMarketsConfig]);
 
   const onSubmit = async (data: any) => {
-    updateConfig(data, {
+    const body: LNMarketsConfigRequest = {
+      api_key: data.api_key,
+      secret_key: data.secret_key,
+      passphrase: data.passphrase,
+      is_testnet: data.is_testnet || false,
+    };
+
+    updateConfig(body, {
       onSuccess: (response: any) => {
         setLNMarketsConfig(response);
       },
