@@ -85,7 +85,7 @@ export const TakeProfitForm: React.FC = () => {
 									<FormControl>
 										<Switch
 											checked={field.value}
-											onChange={field.onChange}
+											onCheckedChange={field.onChange}
 											disabled={isUpdating}
 										/>
 									</FormControl>
@@ -153,7 +153,7 @@ export const TakeProfitForm: React.FC = () => {
 									<FormControl>
 										<Switch
 											checked={field.value}
-											onChange={field.onChange}
+											onCheckedChange={field.onChange}
 											disabled={isUpdating}
 										/>
 									</FormControl>
