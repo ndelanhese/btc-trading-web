@@ -1,15 +1,60 @@
 import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import type React from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AccountBalance } from "@/lib/types";
+import { convertSatoshisToUSD } from "@/lib/utils";
 
 interface AccountBalanceDisplayProps {
 	balance: AccountBalance | null;
 }
 
+interface ConvertedBalance {
+	balance: number;
+	available_balance: number;
+	margin_balance: number;
+}
+
 export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 	balance,
 }) => {
+	const [convertedBalance, setConvertedBalance] = useState<ConvertedBalance | null>(null);
+	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		async function convertBalance() {
+			if (!balance) {
+				setConvertedBalance(null);
+				return;
+			}
+
+			setIsLoading(true);
+			setError(null);
+
+			try {
+				const [balanceUSD, availableBalanceUSD, marginBalanceUSD] = await Promise.all([
+					convertSatoshisToUSD(balance.balance || 0),
+					convertSatoshisToUSD(balance.available_balance || 0),
+					balance.margin_balance ? convertSatoshisToUSD(balance.margin_balance) : Promise.resolve(0),
+				]);
+
+				setConvertedBalance({
+					balance: balanceUSD,
+					available_balance: availableBalanceUSD,
+					margin_balance: marginBalanceUSD,
+				});
+			} catch (err) {
+				console.error('Error converting balance:', err);
+				setError('Failed to convert balance to USD');
+			} finally {
+				setIsLoading(false);
+			}
+		}
+
+		convertBalance();
+	}, [balance]);
+
 	if (!balance) {
 		return (
 			<div className="text-center py-8 text-muted-foreground">
@@ -27,6 +72,40 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 		}).format(amount);
 	};
 
+	const displayBalance = convertedBalance?.balance || 0;
+	const displayAvailableBalance = convertedBalance?.available_balance || 0;
+	const displayMarginBalance = convertedBalance?.margin_balance || 0;
+	const displayMarginUsed = displayBalance - displayAvailableBalance;
+
+	if (isLoading) {
+		return (
+			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+				{[1, 2, 3].map((i) => (
+					<Card key={i} className="animate-pulse">
+						<CardHeader className="pb-2">
+							<div className="h-4 bg-gray-200 rounded w-24"></div>
+						</CardHeader>
+						<CardContent>
+							<div className="h-8 bg-gray-200 rounded w-32"></div>
+						</CardContent>
+					</Card>
+				))}
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="text-center py-8 text-red-600">
+				<DollarSign className="h-12 w-12 mx-auto mb-4 text-red-400" />
+				<p>{error}</p>
+				<p className="text-sm text-muted-foreground mt-2">
+					Showing balance in satoshis as fallback
+				</p>
+			</div>
+		);
+	}
+
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 			{/* Total Balance */}
@@ -39,7 +118,7 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 				<CardContent>
 					<div className="flex items-center justify-between">
 						<p className="text-2xl font-bold">
-							{formatCurrency(balance.balance || 0)}
+							{formatCurrency(displayBalance)}
 						</p>
 						<DollarSign className="h-8 w-8 text-blue-200" />
 					</div>
@@ -56,7 +135,7 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 				<CardContent>
 					<div className="flex items-center justify-between">
 						<p className="text-2xl font-bold">
-							{formatCurrency(balance.available_balance || 0)}
+							{formatCurrency(displayAvailableBalance)}
 						</p>
 						<TrendingUp className="h-8 w-8 text-green-200" />
 					</div>
@@ -73,9 +152,7 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 				<CardContent>
 					<div className="flex items-center justify-between">
 						<p className="text-2xl font-bold">
-							{formatCurrency(
-								(balance.balance || 0) - (balance.available_balance || 0),
-							)}
+							{formatCurrency(displayMarginUsed)}
 						</p>
 						<TrendingDown className="h-8 w-8 text-orange-200" />
 					</div>
@@ -93,7 +170,7 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 							<div>
 								<p className="text-sm text-muted-foreground">Total Balance</p>
 								<p className="text-lg font-semibold">
-									{formatCurrency(balance.balance || 0)}
+									{formatCurrency(displayBalance)}
 								</p>
 							</div>
 							<div>
@@ -101,13 +178,13 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 									Available Balance
 								</p>
 								<p className="text-lg font-semibold">
-									{formatCurrency(balance.available_balance || 0)}
+									{formatCurrency(displayAvailableBalance)}
 								</p>
 							</div>
 							<div>
 								<p className="text-sm text-muted-foreground">Margin Balance</p>
 								<p className="text-lg font-semibold">
-									{formatCurrency(balance.margin_balance || 0)}
+									{formatCurrency(displayMarginBalance)}
 								</p>
 							</div>
 							<div>
