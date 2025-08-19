@@ -140,7 +140,7 @@ export const LNMarketsConfigForm: React.FC = () => {
 										<FormControl>
 											<Switch
 												checked={field.value}
-												onChange={field.onChange}
+												onCheckedChange={field.onChange}
 												disabled={isUpdating}
 											/>
 										</FormControl>
