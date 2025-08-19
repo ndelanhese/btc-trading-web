@@ -23,7 +23,7 @@ export const apiClient = ky.create({
 			},
 		],
 		afterResponse: [
-			async (request, options, response) => {
+			async (_request, _options, response) => {
 				// Handle 401 errors by clearing cookies and redirecting to login
 				if (response.status === 401) {
 					if (typeof window !== "undefined") {

@@ -12,10 +12,11 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { usePositionOperations } from "@/lib/hooks";
+import type { Position } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface PositionsListProps {
-	positions: any[];
+	positions: Position[];
 	onUpdate: () => void;
 }
 
@@ -116,13 +117,13 @@ export const PositionsList: React.FC<PositionsListProps> = ({
 						<TableRow key={position.id}>
 							<TableCell>
 								<div className="flex items-center space-x-2">
-									{position.type === "buy" ? (
+									{position.side === "long" ? (
 										<TrendingUp className="h-4 w-4 text-green-500" />
 									) : (
 										<TrendingDown className="h-4 w-4 text-red-500" />
 									)}
 									<span className="capitalize font-medium">
-										{position.type}
+										{position.side}
 									</span>
 								</div>
 							</TableCell>
@@ -135,12 +136,12 @@ export const PositionsList: React.FC<PositionsListProps> = ({
 								<span
 									className={cn(
 										"font-medium",
-										(position.pnl || 0) >= 0
+										(position.unrealized_pnl || 0) >= 0
 											? "text-green-600"
 											: "text-red-600",
 									)}
 								>
-									{formatCurrency(position.pnl || 0)}
+									{formatCurrency(position.unrealized_pnl || 0)}
 								</span>
 							</TableCell>
 							<TableCell>
@@ -155,7 +156,7 @@ export const PositionsList: React.FC<PositionsListProps> = ({
 										/>
 										<Button
 											size="sm"
-											onClick={() => handleUpdateTakeProfit(position.id)}
+											onClick={() => handleUpdateTakeProfit(position.id || "")}
 											disabled={isUpdatingTakeProfit}
 										>
 											{isUpdatingTakeProfit ? "Saving..." : "Save"}
@@ -170,9 +171,7 @@ export const PositionsList: React.FC<PositionsListProps> = ({
 									</div>
 								) : (
 									<div className="flex items-center space-x-2">
-										<span>
-											{formatCurrency(position.take_profit_price || 0)}
-										</span>
+										<span>{formatCurrency(position.take_profit || 0)}</span>
 										<Button
 											variant="ghost"
 											size="sm"
@@ -195,7 +194,7 @@ export const PositionsList: React.FC<PositionsListProps> = ({
 										/>
 										<Button
 											size="sm"
-											onClick={() => handleUpdateStopLoss(position.id)}
+											onClick={() => handleUpdateStopLoss(position.id || "")}
 											disabled={isUpdatingStopLoss}
 										>
 											{isUpdatingStopLoss ? "Saving..." : "Save"}
@@ -210,7 +209,7 @@ export const PositionsList: React.FC<PositionsListProps> = ({
 									</div>
 								) : (
 									<div className="flex items-center space-x-2">
-										<span>{formatCurrency(position.stop_loss_price || 0)}</span>
+										<span>{formatCurrency(position.stop_loss || 0)}</span>
 										<Button
 											variant="ghost"
 											size="sm"
@@ -225,7 +224,7 @@ export const PositionsList: React.FC<PositionsListProps> = ({
 								<Button
 									variant="destructive"
 									size="sm"
-									onClick={() => handleClosePosition(position.id)}
+									onClick={() => handleClosePosition(position.id || "")}
 									disabled={isClosing}
 								>
 									<X className="h-4 w-4 mr-1" />

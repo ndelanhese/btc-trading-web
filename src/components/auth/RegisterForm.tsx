@@ -1,36 +1,38 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useId } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/hooks";
-
-interface RegisterFormData {
-	username: string;
-	email: string;
-	password: string;
-	confirmPassword: string;
-}
+import { type RegisterFormData, registerSchema } from "@/lib/schemas";
 
 export const RegisterForm: React.FC = () => {
 	const router = useRouter();
 	const { register: registerUser, isRegistering } = useAuth();
 
-	const {
-		register,
-		handleSubmit,
-		watch,
-		formState: { errors },
-	} = useForm<RegisterFormData>();
-
-	const password = watch("password");
+	const form = useForm<RegisterFormData>({
+		resolver: zodResolver(registerSchema),
+		defaultValues: {
+			username: "",
+			email: "",
+			password: "",
+			confirmPassword: "",
+		},
+	});
 
 	const onSubmit = async (data: RegisterFormData) => {
 		registerUser(
@@ -47,11 +49,6 @@ export const RegisterForm: React.FC = () => {
 			},
 		);
 	};
-
-	const usernameId = useId();
-	const emailId = useId();
-	const passwordId = useId();
-	const confirmPasswordId = useId();
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -76,93 +73,95 @@ export const RegisterForm: React.FC = () => {
 						<CardTitle>Register</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="username">Username</Label>
-								<Input
-									id={usernameId}
-									type="text"
-									{...register("username", {
-										required: "Username is required",
-										minLength: {
-											value: 3,
-											message: "Username must be at least 3 characters",
-										},
-									})}
-									placeholder="Enter your username"
+						<Form {...form}>
+							<form
+								onSubmit={form.handleSubmit(onSubmit)}
+								className="space-y-4"
+							>
+								<FormField
+									control={form.control}
+									name="username"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Username</FormLabel>
+											<FormControl>
+												<Input
+													placeholder="Enter your username"
+													disabled={isRegistering}
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-								{errors.username && (
-									<p className="text-sm text-destructive">
-										{errors.username.message}
-									</p>
-								)}
-							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="email">Email</Label>
-								<Input
-									id={emailId}
-									type="email"
-									{...register("email", {
-										required: "Email is required",
-										pattern: {
-											value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-											message: "Invalid email address",
-										},
-									})}
-									placeholder="Enter your email"
+								<FormField
+									control={form.control}
+									name="email"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Email</FormLabel>
+											<FormControl>
+												<Input
+													type="email"
+													placeholder="Enter your email"
+													disabled={isRegistering}
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-								{errors.email && (
-									<p className="text-sm text-destructive">
-										{errors.email.message}
-									</p>
-								)}
-							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="password">Password</Label>
-								<Input
-									id={passwordId}
-									type="password"
-									{...register("password", {
-										required: "Password is required",
-										minLength: {
-											value: 6,
-											message: "Password must be at least 6 characters",
-										},
-									})}
-									placeholder="Enter your password"
+								<FormField
+									control={form.control}
+									name="password"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Password</FormLabel>
+											<FormControl>
+												<Input
+													type="password"
+													placeholder="Enter your password"
+													disabled={isRegistering}
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-								{errors.password && (
-									<p className="text-sm text-destructive">
-										{errors.password.message}
-									</p>
-								)}
-							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="confirmPassword">Confirm Password</Label>
-								<Input
-									id={confirmPasswordId}
-									type="password"
-									{...register("confirmPassword", {
-										required: "Please confirm your password",
-										validate: (value) =>
-											value === password || "Passwords do not match",
-									})}
-									placeholder="Confirm your password"
+								<FormField
+									control={form.control}
+									name="confirmPassword"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Confirm Password</FormLabel>
+											<FormControl>
+												<Input
+													type="password"
+													placeholder="Confirm your password"
+													disabled={isRegistering}
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-								{errors.confirmPassword && (
-									<p className="text-sm text-destructive">
-										{errors.confirmPassword.message}
-									</p>
-								)}
-							</div>
 
-							<Button type="submit" disabled={isRegistering} className="w-full">
-								{isRegistering ? "Creating account..." : "Create account"}
-							</Button>
-						</form>
+								<Button
+									type="submit"
+									className="w-full"
+									disabled={isRegistering}
+								>
+									{isRegistering ? "Creating account..." : "Create account"}
+								</Button>
+							</form>
+						</Form>
 					</CardContent>
 				</Card>
 			</div>

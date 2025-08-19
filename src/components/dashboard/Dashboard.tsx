@@ -19,9 +19,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { tokenCookies } from "@/lib/cookies";
 import { useAccountBalance, useBotManagement, usePositions } from "@/lib/hooks";
 import { useAuthStore, useTradingStore } from "@/lib/store";
-import { AccountBalance } from "./AccountBalance";
+import { AccountBalanceDisplay } from "./AccountBalance";
 import { BotStatus } from "./BotStatus";
-import { LNMarketsConfig } from "./LNMarketsConfig";
+import { LNMarketsConfigForm } from "./LNMarketsConfig";
 import { PositionsList } from "./PositionsList";
 import { TradingConfig } from "./TradingConfig";
 
@@ -37,7 +37,7 @@ export const Dashboard: React.FC = () => {
 		setPositions,
 	} = useTradingStore();
 
-	const [debugInfo, setDebugInfo] = useState<any>({});
+	const [debugInfo, setDebugInfo] = useState<Record<string, unknown>>({});
 
 	const {
 		status: botStatusData,
@@ -214,7 +214,7 @@ export const Dashboard: React.FC = () => {
 								<CardTitle>Account Balance</CardTitle>
 							</CardHeader>
 							<CardContent>
-								<AccountBalance balance={accountBalance} />
+								<AccountBalanceDisplay balance={accountBalance} />
 							</CardContent>
 						</Card>
 
@@ -234,7 +234,7 @@ export const Dashboard: React.FC = () => {
 					</TabsContent>
 
 					<TabsContent value="lnmarkets">
-						<LNMarketsConfig />
+						<LNMarketsConfigForm />
 					</TabsContent>
 
 					<TabsContent value="debug">

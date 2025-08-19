@@ -1,4 +1,5 @@
 import { securityUtils, tokenCookies } from "./cookies";
+import type { User } from "./types";
 
 export const migrateFromLocalStorage = () => {
 	if (typeof window === "undefined") return;
@@ -12,9 +13,9 @@ export const migrateFromLocalStorage = () => {
 			// Validate the old token
 			if (securityUtils.isValidToken(oldToken)) {
 				// Parse user data
-				let userData: any;
+				let userData: Record<string, unknown>;
 				try {
-					userData = JSON.parse(oldUser);
+					userData = JSON.parse(oldUser) as Record<string, unknown>;
 				} catch {
 					console.warn("Invalid user data in localStorage");
 					return;
@@ -22,7 +23,12 @@ export const migrateFromLocalStorage = () => {
 
 				// Migrate to cookies
 				tokenCookies.setAuthToken(oldToken);
-				tokenCookies.setUserData(securityUtils.sanitizeUserData(userData));
+				const sanitizedUserData = securityUtils.sanitizeUserData(
+					userData as unknown as User,
+				);
+				if (sanitizedUserData) {
+					tokenCookies.setUserData(sanitizedUserData);
+				}
 
 				// Clear localStorage
 				localStorage.removeItem("token");
@@ -44,9 +50,9 @@ export const migrateFromLocalStorage = () => {
 	return false;
 };
 
-export const checkAndMigrate = () => {
+export const checkAndMigrate = async () => {
 	// Only run migration if cookies are enabled
-	if (!securityUtils.areCookiesEnabled()) {
+	if (!(await securityUtils.areCookiesEnabled())) {
 		console.warn("Cookies are disabled, cannot migrate from localStorage");
 		return false;
 	}

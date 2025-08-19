@@ -8,19 +8,19 @@ import {
 	tradingConfigApi,
 } from "./api";
 import { createQueryKey } from "./api-client";
-import { securityUtils, tokenCookies } from "./cookies";
+import type { ApiError } from "./types";
 
 export const useAuth = () => {
 	const loginMutation = useMutation({
 		mutationFn: authApi.login,
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(error?.message || "Failed to login. Please try again.");
 		},
 	});
 
 	const registerMutation = useMutation({
 		mutationFn: authApi.register,
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(error?.message || "Failed to register. Please try again.");
 		},
 	});
@@ -49,7 +49,7 @@ export const useLNMarketsConfig = () => {
 				queryKey: createQueryKey("lnmarkets/config"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(error?.message || "Failed to update configuration.");
 		},
 	});
@@ -66,7 +66,7 @@ export const useLNMarketsConfig = () => {
 export const useMarginProtection = () => {
 	const queryClient = useQueryClient();
 
-	const { data, isLoading, error, refetch } = useQuery({
+	const { data, isLoading, error } = useQuery({
 		queryKey: createQueryKey("trading/margin-protection"),
 		queryFn: tradingConfigApi.getMarginProtection,
 	});
@@ -81,7 +81,7 @@ export const useMarginProtection = () => {
 				queryKey: createQueryKey("trading/margin-protection"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(
 				error?.message || "Failed to update margin protection configuration.",
 			);
@@ -100,7 +100,7 @@ export const useMarginProtection = () => {
 export const useTakeProfit = () => {
 	const queryClient = useQueryClient();
 
-	const { data, isLoading, error, refetch } = useQuery({
+	const { data, isLoading, error } = useQuery({
 		queryKey: createQueryKey("trading/take-profit"),
 		queryFn: tradingConfigApi.getTakeProfit,
 	});
@@ -113,7 +113,7 @@ export const useTakeProfit = () => {
 				queryKey: createQueryKey("trading/take-profit"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(
 				error?.message || "Failed to update take profit configuration.",
 			);
@@ -132,7 +132,7 @@ export const useTakeProfit = () => {
 export const useEntryAutomation = () => {
 	const queryClient = useQueryClient();
 
-	const { data, isLoading, error, refetch } = useQuery({
+	const { data, isLoading, error } = useQuery({
 		queryKey: createQueryKey("trading/entry-automation"),
 		queryFn: tradingConfigApi.getEntryAutomation,
 	});
@@ -147,7 +147,7 @@ export const useEntryAutomation = () => {
 				queryKey: createQueryKey("trading/entry-automation"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(
 				error?.message || "Failed to update entry automation configuration.",
 			);
@@ -166,7 +166,7 @@ export const useEntryAutomation = () => {
 export const usePriceAlert = () => {
 	const queryClient = useQueryClient();
 
-	const { data, isLoading, error, refetch } = useQuery({
+	const { data, isLoading, error } = useQuery({
 		queryKey: createQueryKey("trading/price-alert"),
 		queryFn: tradingConfigApi.getPriceAlert,
 	});
@@ -179,7 +179,7 @@ export const usePriceAlert = () => {
 				queryKey: createQueryKey("trading/price-alert"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(
 				error?.message || "Failed to update price alert configuration.",
 			);
@@ -202,7 +202,6 @@ export const useBotManagement = () => {
 		data: status,
 		isLoading,
 		error,
-		refetch,
 	} = useQuery({
 		queryKey: createQueryKey("trading/bot/status"),
 		queryFn: botApi.getStatus,
@@ -217,7 +216,7 @@ export const useBotManagement = () => {
 				queryKey: createQueryKey("trading/bot/status"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(error?.message || "Failed to start the trading bot.");
 		},
 	});
@@ -230,7 +229,7 @@ export const useBotManagement = () => {
 				queryKey: createQueryKey("trading/bot/status"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(error?.message || "Failed to stop the trading bot.");
 		},
 	});
@@ -261,7 +260,7 @@ export const useAccountBalance = () => {
 };
 
 export const usePositions = () => {
-	const { data, isLoading, error, refetch } = useQuery({
+	const { data, isLoading, error } = useQuery({
 		queryKey: createQueryKey("trading/positions"),
 		queryFn: tradingApi.getPositions,
 		refetchInterval: 5000, // Poll every 5 seconds
@@ -271,7 +270,6 @@ export const usePositions = () => {
 		positions: data,
 		isLoading,
 		error,
-		refetch,
 	};
 };
 
@@ -300,7 +298,7 @@ export const usePositionOperations = () => {
 				queryKey: createQueryKey("trading/positions"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(error?.message || "Failed to close position.");
 		},
 	});
@@ -313,7 +311,7 @@ export const usePositionOperations = () => {
 				queryKey: createQueryKey("trading/positions"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(error?.message || "Failed to update take profit.");
 		},
 	});
@@ -326,7 +324,7 @@ export const usePositionOperations = () => {
 				queryKey: createQueryKey("trading/positions"),
 			});
 		},
-		onError: (error: any) => {
+		onError: (error: ApiError) => {
 			toast.error(error?.message || "Failed to update stop loss.");
 		},
 	});

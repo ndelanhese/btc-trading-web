@@ -1,13 +1,15 @@
 import { create } from "zustand";
 import { securityUtils, tokenCookies } from "./cookies";
-
-interface User {
-	id: number;
-	username: string;
-	email: string;
-	created_at: string;
-	updated_at: string;
-}
+import type {
+	AccountBalance,
+	EntryAutomation,
+	LNMarketsConfig,
+	MarginProtection,
+	Position,
+	PriceAlert,
+	TakeProfit,
+	User,
+} from "./types";
 
 interface AuthState {
 	user: User | null;
@@ -21,24 +23,24 @@ interface AuthState {
 
 interface TradingState {
 	botStatus: "running" | "stopped" | "error" | null;
-	accountBalance: any;
-	positions: any[];
-	lnMarketsConfig: any;
-	marginProtection: any;
-	takeProfit: any;
-	entryAutomation: any;
-	priceAlert: any;
+	accountBalance: AccountBalance | null;
+	positions: Position[];
+	lnMarketsConfig: LNMarketsConfig | null;
+	marginProtection: MarginProtection | null;
+	takeProfit: TakeProfit | null;
+	entryAutomation: EntryAutomation | null;
+	priceAlert: PriceAlert | null;
 	setBotStatus: (status: "running" | "stopped" | "error" | null) => void;
-	setAccountBalance: (balance: any) => void;
-	setPositions: (positions: any[]) => void;
-	setLNMarketsConfig: (config: any) => void;
-	setMarginProtection: (config: any) => void;
-	setTakeProfit: (config: any) => void;
-	setEntryAutomation: (config: any) => void;
-	setPriceAlert: (config: any) => void;
+	setAccountBalance: (balance: AccountBalance | null) => void;
+	setPositions: (positions: Position[]) => void;
+	setLNMarketsConfig: (config: LNMarketsConfig | null) => void;
+	setMarginProtection: (config: MarginProtection | null) => void;
+	setTakeProfit: (config: TakeProfit | null) => void;
+	setEntryAutomation: (config: EntryAutomation | null) => void;
+	setPriceAlert: (config: PriceAlert | null) => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
 	user: null,
 	token: null,
 	isAuthenticated: false,
@@ -59,7 +61,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 		if (refreshToken) {
 			await tokenCookies.setRefreshToken(refreshToken);
 		}
-		await tokenCookies.setUserData(sanitizedUser);
+		if (sanitizedUser) {
+			await tokenCookies.setUserData(sanitizedUser);
+		}
 
 		// Update store state
 		set({

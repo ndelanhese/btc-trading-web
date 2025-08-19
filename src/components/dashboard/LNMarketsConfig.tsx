@@ -1,36 +1,51 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import type React from "react";
-import { useEffect, useId } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useLNMarketsConfig } from "@/lib/hooks";
+import {
+	type LNMarketsConfigFormData,
+	lnMarketsConfigSchema,
+} from "@/lib/schemas";
 import { useTradingStore } from "@/lib/store";
-import type { LNMarketsConfigRequest } from "@/lib/types";
+import type { LNMarketsConfig, LNMarketsConfigRequest } from "@/lib/types";
 
-export const LNMarketsConfig: React.FC = () => {
+export const LNMarketsConfigForm: React.FC = () => {
 	const { setLNMarketsConfig } = useTradingStore();
 	const { config, updateConfig, isUpdating } = useLNMarketsConfig();
 
-	const {
-		register,
-		handleSubmit,
-		formState: { errors },
-		reset,
-	} = useForm();
+	const form = useForm<LNMarketsConfigFormData>({
+		resolver: zodResolver(lnMarketsConfigSchema),
+		defaultValues: {
+			api_key: "",
+			secret_key: "",
+			passphrase: "",
+			is_testnet: false,
+		},
+	});
 
 	useEffect(() => {
 		if (config) {
-			reset(config);
+			form.reset(config);
 			setLNMarketsConfig(config);
 		}
-	}, [config, reset, setLNMarketsConfig]);
+	}, [config, form, setLNMarketsConfig]);
 
-	const onSubmit = async (data: any) => {
+	const onSubmit = async (data: LNMarketsConfigFormData) => {
 		const body: LNMarketsConfigRequest = {
 			api_key: data.api_key,
 			secret_key: data.secret_key,
@@ -39,16 +54,11 @@ export const LNMarketsConfig: React.FC = () => {
 		};
 
 		updateConfig(body, {
-			onSuccess: (response: any) => {
+			onSuccess: (response: LNMarketsConfig) => {
 				setLNMarketsConfig(response);
 			},
 		});
 	};
-
-	const apiKeyId = useId();
-	const secretKeyId = useId();
-	const passphraseId = useId();
-	const testnetId = useId();
 
 	return (
 		<div className="space-y-6">
@@ -57,117 +67,94 @@ export const LNMarketsConfig: React.FC = () => {
 					<CardTitle>LN Markets API Configuration</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-						<div className="space-y-2">
-							<Label htmlFor="api-key">API Key</Label>
-							<Input
-								id={apiKeyId}
-								type="password"
-								{...register("api_key", { required: "API key is required" })}
-								placeholder="Enter your LN Markets API key"
+					<Form {...form}>
+						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+							<FormField
+								control={form.control}
+								name="api_key"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>API Key</FormLabel>
+										<FormControl>
+											<Input
+												type="password"
+												placeholder="Enter your LN Markets API key"
+												disabled={isUpdating}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
 							/>
-							{errors.api_key && (
-								<p className="text-sm text-destructive">
-									{errors.api_key.message as string}
-								</p>
-							)}
-						</div>
 
-						<div className="space-y-2">
-							<Label htmlFor="secret-key">Secret Key</Label>
-							<Input
-								id={secretKeyId}
-								type="password"
-								{...register("secret_key", {
-									required: "Secret key is required",
-								})}
-								placeholder="Enter your LN Markets secret key"
+							<FormField
+								control={form.control}
+								name="secret_key"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Secret Key</FormLabel>
+										<FormControl>
+											<Input
+												type="password"
+												placeholder="Enter your LN Markets secret key"
+												disabled={isUpdating}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
 							/>
-							{errors.secret_key && (
-								<p className="text-sm text-destructive">
-									{errors.secret_key.message as string}
-								</p>
-							)}
-						</div>
 
-						<div className="space-y-2">
-							<Label htmlFor="passphrase">Passphrase</Label>
-							<Input
-								id={passphraseId}
-								type="password"
-								{...register("passphrase", {
-									required: "Passphrase is required",
-								})}
-								placeholder="Enter your LN Markets passphrase"
+							<FormField
+								control={form.control}
+								name="passphrase"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Passphrase</FormLabel>
+										<FormControl>
+											<Input
+												type="password"
+												placeholder="Enter your LN Markets passphrase"
+												disabled={isUpdating}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
 							/>
-							{errors.passphrase && (
-								<p className="text-sm text-destructive">
-									{errors.passphrase.message as string}
-								</p>
-							)}
-						</div>
 
-						<div className="flex items-center space-x-2">
-							<Switch
-								id={testnetId}
-								{...register("is_testnet")}
-								defaultChecked={config?.is_testnet || false}
+							<FormField
+								control={form.control}
+								name="is_testnet"
+								render={({ field }) => (
+									<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+										<div className="space-y-0.5">
+											<FormLabel className="text-base">Use Testnet</FormLabel>
+											<p className="text-sm text-muted-foreground">
+												Enable testnet mode for development and testing
+											</p>
+										</div>
+										<FormControl>
+											<Switch
+												checked={field.value}
+												onChange={field.onChange}
+												disabled={isUpdating}
+											/>
+										</FormControl>
+									</FormItem>
+								)}
 							/>
-							<Label htmlFor="testnet">Use Testnet</Label>
-						</div>
 
-						<Button type="submit" disabled={isUpdating}>
-							{isUpdating ? "Saving..." : "Save Configuration"}
-						</Button>
-					</form>
+							<Button type="submit" disabled={isUpdating} className="w-full">
+								{isUpdating ? "Saving..." : "Save Configuration"}
+							</Button>
+						</form>
+					</Form>
 				</CardContent>
 			</Card>
-
-			{config && (
-				<Card>
-					<CardHeader>
-						<CardTitle>Current Configuration</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="space-y-2">
-							<div className="flex justify-between">
-								<span className="text-sm text-muted-foreground">API Key:</span>
-								<span className="text-sm font-mono">
-									{config.api_key
-										? `${config.api_key.substring(0, 8)}...`
-										: "Not set"}
-								</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-sm text-muted-foreground">
-									Secret Key:
-								</span>
-								<span className="text-sm font-mono">
-									{config.secret_key
-										? `${config.secret_key.substring(0, 8)}...`
-										: "Not set"}
-								</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-sm text-muted-foreground">
-									Passphrase:
-								</span>
-								<span className="text-sm font-mono">
-									{config.passphrase
-										? `${config.passphrase.substring(0, 8)}...`
-										: "Not set"}
-								</span>
-							</div>
-							<div className="flex justify-between">
-								<span className="text-sm text-muted-foreground">Testnet:</span>
-								<span className="text-sm">
-									{config.is_testnet ? "Yes" : "No"}
-								</span>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-			)}
 		</div>
 	);
 };

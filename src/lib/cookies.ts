@@ -5,6 +5,7 @@ import {
 	sanitizeUserData,
 	validateTokenFormat,
 } from "./security-config";
+import type { User } from "./types";
 
 // Cookie configuration for security
 const COOKIE_CONFIG = getCookieConfig();
@@ -41,7 +42,7 @@ export const tokenCookies = {
 	hasAuthToken: (): boolean => {
 		try {
 			const result = hasCookie(COOKIE_NAMES.AUTH_TOKEN);
-			return typeof result === 'boolean' ? result : false;
+			return typeof result === "boolean" ? result : false;
 		} catch (error) {
 			console.error("Failed to check auth token:", error);
 			return false;
@@ -71,7 +72,7 @@ export const tokenCookies = {
 	hasRefreshToken: (): boolean => {
 		try {
 			const result = hasCookie(COOKIE_NAMES.REFRESH_TOKEN);
-			return typeof result === 'boolean' ? result : false;
+			return typeof result === "boolean" ? result : false;
 		} catch (error) {
 			console.error("Failed to check refresh token:", error);
 			return false;
@@ -79,9 +80,11 @@ export const tokenCookies = {
 	},
 
 	// Set user data
-	setUserData: async (userData: any) => {
+	setUserData: async (userData: User) => {
 		try {
-			const sanitizedData = sanitizeUserData(userData);
+			const sanitizedData = sanitizeUserData(
+				userData as unknown as Record<string, unknown>,
+			);
 			if (sanitizedData) {
 				await setCookieAction(
 					COOKIE_NAMES.USER_DATA,
@@ -95,17 +98,28 @@ export const tokenCookies = {
 	},
 
 	// Get user data
-	getUserData: (): any => {
+	getUserData: (): User | null => {
 		try {
 			const userData = getCookie(COOKIE_NAMES.USER_DATA);
 			if (typeof userData === "string") {
 				try {
-					return JSON.parse(userData);
+					const parsed = JSON.parse(userData);
+					// Validate that it has the required User properties
+					if (
+						parsed &&
+						typeof parsed === "object" &&
+						typeof parsed.id === "number" &&
+						typeof parsed.username === "string" &&
+						typeof parsed.email === "string"
+					) {
+						return parsed as User;
+					}
+					return null;
 				} catch {
 					return null;
 				}
 			}
-			return userData;
+			return null;
 		} catch (error) {
 			console.error("Failed to get user data:", error);
 			return null;
@@ -116,7 +130,7 @@ export const tokenCookies = {
 	hasUserData: (): boolean => {
 		try {
 			const result = hasCookie(COOKIE_NAMES.USER_DATA);
-			return typeof result === 'boolean' ? result : false;
+			return typeof result === "boolean" ? result : false;
 		} catch (error) {
 			console.error("Failed to check user data:", error);
 			return false;
@@ -152,20 +166,32 @@ export const securityUtils = {
 	},
 
 	// Sanitize user data before storing
-	sanitizeUserData: (userData: any) => {
-		return sanitizeUserData(userData);
+	sanitizeUserData: (userData: User): User | null => {
+		const sanitized = sanitizeUserData(
+			userData as unknown as Record<string, unknown>,
+		);
+		if (sanitized?.created_at && sanitized?.updated_at) {
+			return {
+				id: sanitized.id,
+				username: sanitized.username,
+				email: sanitized.email,
+				created_at: sanitized.created_at,
+				updated_at: sanitized.updated_at,
+			};
+		}
+		return null;
 	},
 
 	// Check if cookies are enabled
-	areCookiesEnabled: (): boolean => {
+	areCookiesEnabled: async (): Promise<boolean> => {
 		if (typeof window === "undefined") return true; // Server-side, assume enabled
 
 		try {
-			// Test if we can set a test cookie
-			document.cookie = "test=1; path=/";
-			const enabled = document.cookie.indexOf("test=") !== -1;
+			// Test if we can set a test cookie using cookies-next
+			setCookie("test", "1", { path: "/" });
+			const enabled = await hasCookie("test");
 			// Clean up test cookie
-			document.cookie = "test=1; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+			deleteCookie("test", { path: "/" });
 			return enabled;
 		} catch {
 			return false;

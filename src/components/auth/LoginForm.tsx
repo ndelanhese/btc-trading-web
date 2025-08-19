@@ -1,51 +1,63 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useId } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/hooks";
+import { type LoginFormData, loginSchema } from "@/lib/schemas";
 import { useAuthStore } from "@/lib/store";
-
-interface LoginFormData {
-	username: string;
-	password: string;
-}
+import type { ApiError, LoginResponse } from "@/lib/types";
 
 export const LoginForm: React.FC = () => {
 	const router = useRouter();
 	const login = useAuthStore((state) => state.login);
 	const { login: loginUser, isLoggingIn } = useAuth();
 
-	const {
-		register,
-		handleSubmit,
-		formState: { errors },
-	} = useForm<LoginFormData>();
+	const form = useForm<LoginFormData>({
+		resolver: zodResolver(loginSchema),
+		defaultValues: {
+			username: "",
+			password: "",
+		},
+	});
 
 	const onSubmit = async (data: LoginFormData) => {
 		try {
 			loginUser(data, {
-				onSuccess: async (response: any) => {
+				onSuccess: async (response: LoginResponse) => {
 					try {
 						const { token, refresh_token, user } = response;
-						await login(user, token, refresh_token);
-						toast.success("Login successful!");
-						router.push("/dashboard");
+						if (token && user) {
+							await login(user, token, refresh_token);
+							toast.success("Login successful!");
+							router.push("/dashboard");
+						} else {
+							toast.error("Invalid response from server");
+						}
 					} catch (error) {
 						console.error("Failed to store authentication data:", error);
 						toast.error("Failed to complete login. Please try again.");
 					}
 				},
-				onError: (error: any) => {
+				onError: (error: ApiError) => {
 					console.error("Login error:", error);
-					toast.error(error?.message || "Login failed. Please check your credentials.");
+					toast.error(
+						error?.message || "Login failed. Please check your credentials.",
+					);
 				},
 			});
 		} catch (error) {
@@ -53,9 +65,6 @@ export const LoginForm: React.FC = () => {
 			toast.error("An unexpected error occurred. Please try again.");
 		}
 	};
-
-	const usernameId = useId();
-	const passwordId = useId();
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -80,47 +89,53 @@ export const LoginForm: React.FC = () => {
 						<CardTitle>Login</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="username">Username</Label>
-								<Input
-									id={usernameId}
-									type="text"
-									{...register("username", {
-										required: "Username is required",
-									})}
-									placeholder="Enter your username"
-									disabled={isLoggingIn}
+						<Form {...form}>
+							<form
+								onSubmit={form.handleSubmit(onSubmit)}
+								className="space-y-4"
+							>
+								<FormField
+									control={form.control}
+									name="username"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Username</FormLabel>
+											<FormControl>
+												<Input
+													placeholder="Enter your username"
+													disabled={isLoggingIn}
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-								{errors.username && (
-									<p className="text-sm text-destructive">
-										{errors.username.message}
-									</p>
-								)}
-							</div>
 
-							<div className="space-y-2">
-								<Label htmlFor="password">Password</Label>
-								<Input
-									id={passwordId}
-									type="password"
-									{...register("password", {
-										required: "Password is required",
-									})}
-									placeholder="Enter your password"
-									disabled={isLoggingIn}
+								<FormField
+									control={form.control}
+									name="password"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Password</FormLabel>
+											<FormControl>
+												<Input
+													type="password"
+													placeholder="Enter your password"
+													disabled={isLoggingIn}
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-								{errors.password && (
-									<p className="text-sm text-destructive">
-										{errors.password.message}
-									</p>
-								)}
-							</div>
 
-							<Button type="submit" disabled={isLoggingIn} className="w-full">
-								{isLoggingIn ? "Signing in..." : "Sign in"}
-							</Button>
-						</form>
+								<Button type="submit" className="w-full" disabled={isLoggingIn}>
+									{isLoggingIn ? "Signing in..." : "Sign in"}
+								</Button>
+							</form>
+						</Form>
 					</CardContent>
 				</Card>
 			</div>

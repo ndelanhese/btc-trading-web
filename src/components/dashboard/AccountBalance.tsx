@@ -1,13 +1,15 @@
 import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import type React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import type { AccountBalance } from "@/lib/types";
 
-interface AccountBalanceProps {
-	balance: any;
+interface AccountBalanceDisplayProps {
+	balance: AccountBalance | null;
 }
 
-export const AccountBalance: React.FC<AccountBalanceProps> = ({ balance }) => {
+export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
+	balance,
+}) => {
 	if (!balance) {
 		return (
 			<div className="text-center py-8 text-muted-foreground">
@@ -25,10 +27,6 @@ export const AccountBalance: React.FC<AccountBalanceProps> = ({ balance }) => {
 		}).format(amount);
 	};
 
-	const formatSats = (sats: number) => {
-		return new Intl.NumberFormat("en-US").format(sats);
-	};
-
 	return (
 		<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 			{/* Total Balance */}
@@ -41,7 +39,7 @@ export const AccountBalance: React.FC<AccountBalanceProps> = ({ balance }) => {
 				<CardContent>
 					<div className="flex items-center justify-between">
 						<p className="text-2xl font-bold">
-							{formatCurrency(balance.total_balance || 0)}
+							{formatCurrency(balance.balance || 0)}
 						</p>
 						<DollarSign className="h-8 w-8 text-blue-200" />
 					</div>
@@ -75,7 +73,9 @@ export const AccountBalance: React.FC<AccountBalanceProps> = ({ balance }) => {
 				<CardContent>
 					<div className="flex items-center justify-between">
 						<p className="text-2xl font-bold">
-							{formatCurrency(balance.margin_used || 0)}
+							{formatCurrency(
+								(balance.balance || 0) - (balance.available_balance || 0),
+							)}
 						</p>
 						<TrendingDown className="h-8 w-8 text-orange-200" />
 					</div>
@@ -83,7 +83,7 @@ export const AccountBalance: React.FC<AccountBalanceProps> = ({ balance }) => {
 			</Card>
 
 			{/* Additional Details */}
-			{balance.sats && (
+			{balance.margin_balance && (
 				<Card className="md:col-span-3">
 					<CardHeader>
 						<CardTitle>Detailed Balance</CardTitle>
@@ -91,34 +91,29 @@ export const AccountBalance: React.FC<AccountBalanceProps> = ({ balance }) => {
 					<CardContent>
 						<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
 							<div>
-								<p className="text-sm text-muted-foreground">Sats Balance</p>
+								<p className="text-sm text-muted-foreground">Total Balance</p>
 								<p className="text-lg font-semibold">
-									{formatSats(balance.sats.balance || 0)} sats
+									{formatCurrency(balance.balance || 0)}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm text-muted-foreground">Available Sats</p>
+								<p className="text-sm text-muted-foreground">
+									Available Balance
+								</p>
 								<p className="text-lg font-semibold">
-									{formatSats(balance.sats.available || 0)} sats
+									{formatCurrency(balance.available_balance || 0)}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm text-muted-foreground">Margin Sats</p>
+								<p className="text-sm text-muted-foreground">Margin Balance</p>
 								<p className="text-lg font-semibold">
-									{formatSats(balance.sats.margin || 0)} sats
+									{formatCurrency(balance.margin_balance || 0)}
 								</p>
 							</div>
 							<div>
-								<p className="text-sm text-muted-foreground">Unrealized P&L</p>
-								<p
-									className={cn(
-										"text-lg font-semibold",
-										(balance.sats.unrealized_pnl || 0) >= 0
-											? "text-green-600"
-											: "text-red-600",
-									)}
-								>
-									{formatCurrency(balance.sats.unrealized_pnl || 0)}
+								<p className="text-sm text-muted-foreground">Currency</p>
+								<p className="text-lg font-semibold">
+									{balance.currency || "USD"}
 								</p>
 							</div>
 						</div>
