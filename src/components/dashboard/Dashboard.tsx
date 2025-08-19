@@ -1,13 +1,22 @@
 "use client";
 
-import { BarChart3, Play, Settings, Square, User, Wallet } from "lucide-react";
+import {
+	BarChart3,
+	Bug,
+	Play,
+	Settings,
+	Square,
+	User,
+	Wallet,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { tokenCookies } from "@/lib/cookies";
 import { useAccountBalance, useBotManagement, usePositions } from "@/lib/hooks";
 import { useAuthStore, useTradingStore } from "@/lib/store";
 import { AccountBalance } from "./AccountBalance";
@@ -18,7 +27,7 @@ import { TradingConfig } from "./TradingConfig";
 
 export const Dashboard: React.FC = () => {
 	const router = useRouter();
-	const { user, logout, isAuthenticated } = useAuthStore();
+	const { user, logout, isAuthenticated, isInitialized } = useAuthStore();
 	const {
 		botStatus,
 		accountBalance,
@@ -27,6 +36,8 @@ export const Dashboard: React.FC = () => {
 		setAccountBalance,
 		setPositions,
 	} = useTradingStore();
+
+	const [debugInfo, setDebugInfo] = useState<any>({});
 
 	const {
 		status: botStatusData,
@@ -39,11 +50,11 @@ export const Dashboard: React.FC = () => {
 	const { positions: positionsData } = usePositions();
 
 	useEffect(() => {
-		if (!isAuthenticated) {
+		if (!isAuthenticated && isInitialized) {
 			router.push("/login");
 			return;
 		}
-	}, [isAuthenticated, router]);
+	}, [isAuthenticated, isInitialized, router]);
 
 	useEffect(() => {
 		if (botStatusData) {
@@ -65,6 +76,25 @@ export const Dashboard: React.FC = () => {
 		}
 	}, [positionsData, setPositions]);
 
+	// Debug function to check cookie state
+	const checkCookieState = () => {
+		const debug = {
+			hasAuthToken: tokenCookies.hasAuthToken(),
+			hasUserData: tokenCookies.hasUserData(),
+			hasRefreshToken: tokenCookies.hasRefreshToken(),
+			authToken: tokenCookies.getAuthToken() ? "Present" : "Not found",
+			userData: tokenCookies.getUserData() ? "Present" : "Not found",
+			refreshToken: tokenCookies.getRefreshToken() ? "Present" : "Not found",
+			storeState: {
+				isAuthenticated,
+				isInitialized,
+				user: user ? "Present" : "Not found",
+			},
+		};
+		setDebugInfo(debug);
+		console.log("Cookie Debug Info:", debug);
+	};
+
 	const handleStartBot = () => {
 		startBot();
 	};
@@ -79,8 +109,19 @@ export const Dashboard: React.FC = () => {
 		toast.success("Logged out successfully");
 	};
 
-	if (!isAuthenticated) {
-		return null;
+	if (!isAuthenticated || !isInitialized) {
+		return (
+			<div className="min-h-screen flex items-center justify-center bg-background">
+				<div className="text-center">
+					<h2 className="text-2xl font-bold mb-4">Loading...</h2>
+					<p className="text-muted-foreground">
+						{!isInitialized
+							? "Initializing authentication..."
+							: "Redirecting to login..."}
+					</p>
+				</div>
+			</div>
+		);
 	}
 
 	return (
@@ -110,7 +151,7 @@ export const Dashboard: React.FC = () => {
 			{/* Main Content */}
 			<main className="container mx-auto py-6 px-4">
 				<Tabs defaultValue="overview" className="space-y-6">
-					<TabsList className="grid w-full grid-cols-4">
+					<TabsList className="grid w-full grid-cols-5">
 						<TabsTrigger
 							value="overview"
 							className="flex items-center space-x-2"
@@ -128,6 +169,10 @@ export const Dashboard: React.FC = () => {
 						>
 							<Wallet className="h-4 w-4" />
 							<span>LN Markets</span>
+						</TabsTrigger>
+						<TabsTrigger value="debug" className="flex items-center space-x-2">
+							<Bug className="h-4 w-4" />
+							<span>Debug</span>
 						</TabsTrigger>
 					</TabsList>
 
@@ -190,6 +235,30 @@ export const Dashboard: React.FC = () => {
 
 					<TabsContent value="lnmarkets">
 						<LNMarketsConfig />
+					</TabsContent>
+
+					<TabsContent value="debug">
+						<Card>
+							<CardHeader>
+								<CardTitle>Authentication Debug</CardTitle>
+							</CardHeader>
+							<CardContent>
+								<div className="space-y-4">
+									<Button onClick={checkCookieState} variant="outline">
+										Check Cookie State
+									</Button>
+
+									{Object.keys(debugInfo).length > 0 && (
+										<div className="space-y-2">
+											<h3 className="font-semibold">Cookie Status:</h3>
+											<pre className="bg-muted p-4 rounded text-sm overflow-auto">
+												{JSON.stringify(debugInfo, null, 2)}
+											</pre>
+										</div>
+									)}
+								</div>
+							</CardContent>
+						</Card>
 					</TabsContent>
 				</Tabs>
 			</main>

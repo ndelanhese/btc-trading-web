@@ -30,14 +30,28 @@ export const LoginForm: React.FC = () => {
 	} = useForm<LoginFormData>();
 
 	const onSubmit = async (data: LoginFormData) => {
-		loginUser(data, {
-			onSuccess: (response: any) => {
-				const { token, user } = response;
-				login(user, token);
-				toast.success("Login successful!");
-				router.push("/dashboard");
-			},
-		});
+		try {
+			loginUser(data, {
+				onSuccess: async (response: any) => {
+					try {
+						const { token, refresh_token, user } = response;
+						await login(user, token, refresh_token);
+						toast.success("Login successful!");
+						router.push("/dashboard");
+					} catch (error) {
+						console.error("Failed to store authentication data:", error);
+						toast.error("Failed to complete login. Please try again.");
+					}
+				},
+				onError: (error: any) => {
+					console.error("Login error:", error);
+					toast.error(error?.message || "Login failed. Please check your credentials.");
+				},
+			});
+		} catch (error) {
+			console.error("Form submission error:", error);
+			toast.error("An unexpected error occurred. Please try again.");
+		}
 	};
 
 	const usernameId = useId();
@@ -76,6 +90,7 @@ export const LoginForm: React.FC = () => {
 										required: "Username is required",
 									})}
 									placeholder="Enter your username"
+									disabled={isLoggingIn}
 								/>
 								{errors.username && (
 									<p className="text-sm text-destructive">
@@ -93,6 +108,7 @@ export const LoginForm: React.FC = () => {
 										required: "Password is required",
 									})}
 									placeholder="Enter your password"
+									disabled={isLoggingIn}
 								/>
 								{errors.password && (
 									<p className="text-sm text-destructive">

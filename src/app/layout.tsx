@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/components/providers/auth-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -17,8 +18,10 @@ export default function RootLayout({
 		<html lang="en">
 			<body>
 				<QueryProvider>
-					{children}
-					<Toaster />
+					<AuthProvider>
+						{children}
+						<Toaster />
+					</AuthProvider>
 				</QueryProvider>
 			</body>
 		</html>

@@ -8,20 +8,13 @@ import {
 	tradingConfigApi,
 } from "./api";
 import { createQueryKey } from "./api-client";
+import { securityUtils, tokenCookies } from "./cookies";
 
 export const useAuth = () => {
 	const loginMutation = useMutation({
 		mutationFn: authApi.login,
 		onError: (error: any) => {
 			toast.error(error?.message || "Failed to login. Please try again.");
-		},
-		onSuccess: (data) => {
-			if (data.token && typeof window !== "undefined") {
-				localStorage.setItem("token", data.token);
-				if (data.user) {
-					localStorage.setItem("user", JSON.stringify(data.user));
-				}
-			}
 		},
 	});
 
@@ -43,7 +36,7 @@ export const useAuth = () => {
 export const useLNMarketsConfig = () => {
 	const queryClient = useQueryClient();
 
-	const { data, isLoading, error, refetch } = useQuery({
+	const { data, isLoading, error } = useQuery({
 		queryKey: createQueryKey("lnmarkets/config"),
 		queryFn: lnMarketsApi.getConfig,
 	});
@@ -115,7 +108,7 @@ export const useTakeProfit = () => {
 	const updateConfig = useMutation({
 		mutationFn: tradingConfigApi.updateTakeProfit,
 		onSuccess: () => {
-		toast.success("Take profit configuration has been updated successfully.");
+			toast.success("Take profit configuration has been updated successfully.");
 			queryClient.invalidateQueries({
 				queryKey: createQueryKey("trading/take-profit"),
 			});
@@ -181,9 +174,7 @@ export const usePriceAlert = () => {
 	const updateConfig = useMutation({
 		mutationFn: tradingConfigApi.updatePriceAlert,
 		onSuccess: () => {
-			toast.success(
-				"Price alert configuration has been updated successfully.",
-			);
+			toast.success("Price alert configuration has been updated successfully.");
 			queryClient.invalidateQueries({
 				queryKey: createQueryKey("trading/price-alert"),
 			});
@@ -221,7 +212,7 @@ export const useBotManagement = () => {
 	const startBot = useMutation({
 		mutationFn: botApi.startBot,
 		onSuccess: () => {
-      toast.success("Trading bot has been started successfully.");
+			toast.success("Trading bot has been started successfully.");
 			queryClient.invalidateQueries({
 				queryKey: createQueryKey("trading/bot/status"),
 			});
