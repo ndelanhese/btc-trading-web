@@ -16,7 +16,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 		const initAuth = async () => {
 			try {
 				// Check for localStorage migration first
-				const migrated = checkAndMigrate();
+				const migrated = await checkAndMigrate();
 
 				// Initialize auth state from cookies on app start
 				await initialize();
