@@ -1,6 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AccountBalance } from "@/lib/types";
 import { convertSatoshisToUSD } from "@/lib/utils";
@@ -18,42 +18,43 @@ interface ConvertedBalance {
 export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 	balance,
 }) => {
-	const [convertedBalance, setConvertedBalance] = useState<ConvertedBalance | null>(null);
-	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		async function convertBalance() {
+	const {
+		data: convertedBalance,
+		isLoading,
+		error,
+	} = useQuery({
+		queryKey: [
+			"balance-conversion",
+			balance?.balance,
+			balance?.available_balance,
+			balance?.margin_balance,
+		],
+		queryFn: async (): Promise<ConvertedBalance> => {
 			if (!balance) {
-				setConvertedBalance(null);
-				return;
+				throw new Error("No balance data available");
 			}
 
-			setIsLoading(true);
-			setError(null);
-
-			try {
-				const [balanceUSD, availableBalanceUSD, marginBalanceUSD] = await Promise.all([
+			const [balanceUSD, availableBalanceUSD, marginBalanceUSD] =
+				await Promise.all([
 					convertSatoshisToUSD(balance.balance || 0),
 					convertSatoshisToUSD(balance.available_balance || 0),
-					balance.margin_balance ? convertSatoshisToUSD(balance.margin_balance) : Promise.resolve(0),
+					balance.margin_balance
+						? convertSatoshisToUSD(balance.margin_balance)
+						: Promise.resolve(0),
 				]);
 
-				setConvertedBalance({
-					balance: balanceUSD,
-					available_balance: availableBalanceUSD,
-					margin_balance: marginBalanceUSD,
-				});
-			} catch (err) {
-				console.error('Error converting balance:', err);
-				setError('Failed to convert balance to USD');
-			} finally {
-				setIsLoading(false);
-			}
-		}
-
-		convertBalance();
-	}, [balance]);
+			return {
+				balance: balanceUSD,
+				available_balance: availableBalanceUSD,
+				margin_balance: marginBalanceUSD,
+			};
+		},
+		enabled: !!balance,
+		staleTime: 5 * 60 * 1000, // 5 minutes
+		gcTime: 10 * 60 * 1000, // 10 minutes
+		retry: 3,
+		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+	});
 
 	if (!balance) {
 		return (
@@ -98,7 +99,7 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 		return (
 			<div className="text-center py-8 text-red-600">
 				<DollarSign className="h-12 w-12 mx-auto mb-4 text-red-400" />
-				<p>{error}</p>
+				<p>{error.message || "Failed to convert balance to USD"}</p>
 				<p className="text-sm text-muted-foreground mt-2">
 					Showing balance in satoshis as fallback
 				</p>
