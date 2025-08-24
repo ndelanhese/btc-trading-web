@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 import type React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useBitcoinPrice } from "@/lib/hooks";
 import type { AccountBalance } from "@/lib/types";
 import { convertSatoshisToUSD } from "@/lib/utils";
 
@@ -18,6 +19,8 @@ interface ConvertedBalance {
 export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 	balance,
 }) => {
+	const { price: bitcoinPrice, isLoading: isPriceLoading } = useBitcoinPrice();
+
 	const {
 		data: convertedBalance,
 		isLoading,
@@ -28,6 +31,7 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 			balance?.balance,
 			balance?.available_balance,
 			balance?.margin_balance,
+			bitcoinPrice, // Include bitcoin price in query key to refetch when price changes
 		],
 		queryFn: async (): Promise<ConvertedBalance> => {
 			if (!balance) {
@@ -49,9 +53,9 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 				margin_balance: marginBalanceUSD,
 			};
 		},
-		enabled: !!balance,
-		staleTime: 5 * 60 * 1000, // 5 minutes
-		gcTime: 10 * 60 * 1000, // 10 minutes
+		enabled: !!balance && bitcoinPrice !== null,
+		staleTime: 30 * 1000, // 30 seconds - shorter since we have real-time price
+		gcTime: 5 * 60 * 1000, // 5 minutes
 		retry: 3,
 		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
 	});
@@ -78,7 +82,7 @@ export const AccountBalanceDisplay: React.FC<AccountBalanceDisplayProps> = ({
 	const displayMarginBalance = convertedBalance?.margin_balance || 0;
 	const displayMarginUsed = displayBalance - displayAvailableBalance;
 
-	if (isLoading) {
+	if (isLoading || isPriceLoading) {
 		return (
 			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 				{[1, 2, 3].map((i) => (

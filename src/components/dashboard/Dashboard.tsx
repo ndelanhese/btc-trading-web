@@ -20,6 +20,7 @@ import { tokenCookies } from "@/lib/cookies";
 import { useAccountBalance, useBotManagement, usePositions } from "@/lib/hooks";
 import { useAuthStore, useTradingStore } from "@/lib/store";
 import { AccountBalanceDisplay } from "./AccountBalance";
+import { BitcoinPriceDisplay } from "./BitcoinPriceDisplay";
 import { BotStatus } from "./BotStatus";
 import { LNMarketsConfigForm } from "./LNMarketsConfig";
 import { PositionsList } from "./PositionsList";
@@ -177,6 +178,9 @@ export const Dashboard: React.FC = () => {
 					</TabsList>
 
 					<TabsContent value="overview" className="space-y-6">
+						{/* Bitcoin Price */}
+						<BitcoinPriceDisplay />
+
 						{/* Bot Control */}
 						<Card>
 							<CardHeader>
@@ -209,14 +213,14 @@ export const Dashboard: React.FC = () => {
 						</Card>
 
 						{/* Account Balance */}
-						<Card>
+						{/* <Card>
 							<CardHeader>
 								<CardTitle>Account Balance</CardTitle>
 							</CardHeader>
 							<CardContent>
 								<AccountBalanceDisplay balance={accountBalance} />
 							</CardContent>
-						</Card>
+						</Card> */}
 
 						{/* Positions */}
 						<Card>

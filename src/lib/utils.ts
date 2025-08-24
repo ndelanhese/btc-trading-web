@@ -25,7 +25,22 @@ export function satoshisToUSD(satoshis: number, bitcoinPrice: number): number {
 	return bitcoins * bitcoinPrice;
 }
 
+// Global variable to store the latest WebSocket price
+let latestWebSocketPrice: number | null = null;
+
+export function setLatestBitcoinPrice(price: number) {
+	latestWebSocketPrice = price;
+}
+
 export async function convertSatoshisToUSD(satoshis: number): Promise<number> {
-	const bitcoinPrice = await getBitcoinPrice();
+	// Use WebSocket price if available, otherwise fallback to API
+	let bitcoinPrice: number;
+	
+	if (latestWebSocketPrice !== null) {
+		bitcoinPrice = latestWebSocketPrice;
+	} else {
+		bitcoinPrice = await getBitcoinPrice();
+	}
+	
 	return satoshisToUSD(satoshis, bitcoinPrice);
 }

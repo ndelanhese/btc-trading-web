@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	authApi,
@@ -8,7 +9,9 @@ import {
 	tradingConfigApi,
 } from "./api";
 import { createQueryKey } from "./api-client";
+import { tokenCookies } from "./cookies";
 import type { ApiError } from "./types";
+import { setLatestBitcoinPrice } from "./utils";
 
 export const useAuth = () => {
 	const loginMutation = useMutation({
@@ -336,5 +339,139 @@ export const usePositionOperations = () => {
 		isClosing: closePosition.isPending,
 		isUpdatingTakeProfit: updateTakeProfit.isPending,
 		isUpdatingStopLoss: updateStopLoss.isPending,
+	};
+};
+
+export const useBitcoinPriceWebSocket = () => {
+	const [price, setPrice] = useState<number | null>(null);
+	const [sources, setSources] = useState<Record<string, number>>({});
+	const [timestamp, setTimestamp] = useState<number | null>(null);
+	const [isConnected, setIsConnected] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+	const socketRef = useRef<WebSocket | null>(null);
+	const isConnectingRef = useRef(false);
+
+	useEffect(() => {
+		const connectSocket = () => {
+			if (isConnectingRef.current) {
+				return;
+			}
+			
+			isConnectingRef.current = true;
+			
+			try {
+				if (socketRef.current) {
+					socketRef.current.close();
+					socketRef.current = null;
+				}
+				const baseUrl = process.env.NEXT_PUBLIC_WS_API_URL || "ws://localhost:8080";
+
+				const token = tokenCookies
+				.getAuthToken();
+				if (!token) {
+					setError("Authentication token not found");
+					return;
+				}
+
+				const wsUrl = `${baseUrl}/api/ws/btc-price?token=${encodeURIComponent(token)}`;
+				const socket = new WebSocket(wsUrl);
+
+				socket.onopen = () => {
+					isConnectingRef.current = false;
+					setIsConnected(true);
+					setError(null);
+					toast.success("WebSocket connected to BTC price stream");
+				};
+
+				socket.onmessage = (event) => {
+					try {
+						const data = JSON.parse(event.data);
+						setPrice(data.price);
+						setSources(data.sources);
+						setTimestamp(data.timestamp);
+						setLatestBitcoinPrice(data.price);
+					} catch (err) {
+						toast.error("Failed to parse WebSocket message");
+					}
+				};
+
+				socket.onclose = (event) => {
+					isConnectingRef.current = false;
+					setIsConnected(false);
+					toast.warning("WebSocket disconnected from BTC price stream");
+					
+					if (event.code !== 1000 && socketRef.current === socket) {
+						toast.warning("Attempting to reconnect in 3 seconds...");
+						setTimeout(() => {
+							if (socketRef.current === socket) {
+								connectSocket();
+							}
+						}, 3000);
+					}
+				};
+
+				socket.onerror = (error) => {
+					isConnectingRef.current = false;
+					setError("WebSocket connection error");
+					toast.error("WebSocket connection error");
+				};
+
+				socketRef.current = socket;
+			} catch (err) {
+				isConnectingRef.current = false;
+				setError("Failed to connect to WebSocket");
+				toast.error("Failed to create WebSocket connection");
+			}
+		};
+
+		connectSocket();
+
+		return () => {
+			if (socketRef.current) {
+				socketRef.current.close(1000, "Component unmounting");
+				socketRef.current = null;
+			}
+		};
+	}, []);
+
+	return {
+		price,
+		sources,
+		timestamp,
+		isConnected,
+		error,
+	};
+};
+
+export const useBitcoinPrice = () => {
+	const { price: wsPrice, isConnected } = useBitcoinPriceWebSocket();
+	const [apiPrice, setApiPrice] = useState<number | null>(null);
+	const [isLoading, setIsLoading] = useState(false);
+
+	useEffect(() => {
+		if (isConnected && wsPrice !== null) {
+			return;
+		}
+
+		const fetchApiPrice = async () => {
+			setIsLoading(true);
+			try {
+				const { getBitcoinPrice } = await import("./utils");
+				const price = await getBitcoinPrice();
+				setApiPrice(price);
+			} catch (error) {
+				toast.error("Failed to fetch Bitcoin price from API");
+			} finally {
+				setIsLoading(false);
+			}
+		};
+
+		fetchApiPrice();
+	}, [isConnected, wsPrice]);
+
+	return {
+		price: wsPrice !== null ? wsPrice : apiPrice,
+		isLoading: isLoading && !isConnected,
+		isConnected,
 	};
 };
