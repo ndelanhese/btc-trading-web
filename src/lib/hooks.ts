@@ -364,7 +364,29 @@ export const useBitcoinPriceWebSocket = () => {
 					socketRef.current.close();
 					socketRef.current = null;
 				}
-				const baseUrl = process.env.NEXT_PUBLIC_WS_API_URL || "ws://localhost:8080";
+				const baseUrl = (() => {
+					// Prefer explicit env override
+					const envUrl = process.env.NEXT_PUBLIC_WS_API_URL;
+					if (envUrl && typeof envUrl === "string") return envUrl.replace(/\/?$/,'');
+
+					// Derive from current page protocol and host to avoid mixed content
+					if (typeof window !== "undefined") {
+						const isSecure = window.location.protocol === "https:";
+						const wsScheme = isSecure ? "wss" : "ws";
+						// If backend is running on same host but different port, allow configuring via NEXT_PUBLIC_API_URL
+						const apiBase = process.env.NEXT_PUBLIC_API_URL;
+						if (apiBase && /^https?:\/\//.test(apiBase)) {
+							try {
+								const u = new URL(apiBase);
+								return `${wsScheme}://${u.host}`;
+							} catch {}
+						}
+						return `${wsScheme}://${window.location.host}`;
+					}
+
+					// Fallback for SSR or unknown
+					return "ws://localhost:8080";
+				})();
 
 				const token = tokenCookies
 				.getAuthToken();

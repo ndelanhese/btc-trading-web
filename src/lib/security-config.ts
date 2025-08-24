@@ -43,7 +43,7 @@ export const SECURITY_CONFIG = {
 			"style-src 'self' 'unsafe-inline'",
 			"img-src 'self' data: https:",
 			"font-src 'self'",
-			"connect-src 'self' http://localhost:8080 https://api-btc-trading-bot.ndelanhese.online",
+			"connect-src 'self' http://localhost:8080 https://api-btc-trading-bot.ndelanhese.online ws://localhost:8080 wss://api-btc-trading-bot.ndelanhese.online ws: wss:",
 			"frame-ancestors 'none'",
 		].join("; "),
 
