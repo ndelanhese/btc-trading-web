@@ -44,7 +44,7 @@ export const MarginProtectionForm: React.FC = () => {
 				enabled: config.is_enabled,
 				max_margin_usage: config.activation_distance || 80,
 				stop_loss_percentage: config.new_liquidation_distance || 10,
-				auto_close_threshold: 5, // Default value if not in config
+				auto_close_threshold: 5,
 			});
 			setMarginProtection(config);
 		}

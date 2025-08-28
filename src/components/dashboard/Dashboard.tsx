@@ -8,6 +8,7 @@ import {
 	Square,
 	User,
 	Wallet,
+	Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
@@ -25,6 +26,7 @@ import { BotStatus } from "./BotStatus";
 import { LNMarketsConfigForm } from "./LNMarketsConfig";
 import { PositionsList } from "./PositionsList";
 import { TradingConfig } from "./TradingConfig";
+import { AutomatedTradingDashboard } from "./AutomatedTradingDashboard";
 
 export const Dashboard: React.FC = () => {
 	const router = useRouter();
@@ -152,13 +154,17 @@ export const Dashboard: React.FC = () => {
 			{/* Main Content */}
 			<main className="container mx-auto py-6 px-4">
 				<Tabs defaultValue="overview" className="space-y-6">
-					<TabsList className="grid w-full grid-cols-5">
+					<TabsList className="grid w-full grid-cols-6">
 						<TabsTrigger
 							value="overview"
 							className="flex items-center space-x-2"
 						>
 							<BarChart3 className="h-4 w-4" />
 							<span>Overview</span>
+						</TabsTrigger>
+						<TabsTrigger value="automated" className="flex items-center space-x-2">
+							<Zap className="h-4 w-4" />
+							<span>Trading Automatizado</span>
 						</TabsTrigger>
 						<TabsTrigger value="config" className="flex items-center space-x-2">
 							<Settings className="h-4 w-4" />
@@ -213,14 +219,14 @@ export const Dashboard: React.FC = () => {
 						</Card>
 
 						{/* Account Balance */}
-						{/* <Card>
+						<Card>
 							<CardHeader>
 								<CardTitle>Account Balance</CardTitle>
 							</CardHeader>
 							<CardContent>
 								<AccountBalanceDisplay balance={accountBalance} />
 							</CardContent>
-						</Card> */}
+						</Card>
 
 						{/* Positions */}
 						<Card>
@@ -231,6 +237,10 @@ export const Dashboard: React.FC = () => {
 								<PositionsList positions={positions} onUpdate={() => {}} />
 							</CardContent>
 						</Card>
+					</TabsContent>
+
+					<TabsContent value="automated">
+						<AutomatedTradingDashboard />
 					</TabsContent>
 
 					<TabsContent value="config">

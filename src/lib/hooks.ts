@@ -478,11 +478,12 @@ export const useBitcoinPrice = () => {
 		const fetchApiPrice = async () => {
 			setIsLoading(true);
 			try {
-				const { getBitcoinPrice } = await import("./utils");
-				const price = await getBitcoinPrice();
+				// Use the new WebSocket-based crypto API
+				const { cryptoApi } = await import("./crypto-api");
+				const price = await cryptoApi.getBitcoinPrice();
 				setApiPrice(price);
 			} catch (error) {
-				toast.error("Failed to fetch Bitcoin price from API");
+				toast.error("Failed to fetch Bitcoin price from WebSocket API");
 			} finally {
 				setIsLoading(false);
 			}

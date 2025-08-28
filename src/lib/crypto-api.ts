@@ -1,17 +1,20 @@
-// API Ninjas Crypto Price API Client
-// https://api-ninjas.com/api/cryptoprice
+// WebSocket-based Crypto Price API Client
+// Connects to our backend's BTC price WebSocket endpoint
 
-const API_NINJAS_BASE_URL = "https://api.api-ninjas.com/v1";
-const API_NINJAS_KEY = process.env.NEXT_PUBLIC_API_NINJAS_KEY;
+import { tokenCookies } from "./cookies";
 
-// Cache for crypto prices to minimize API calls
-const priceCache: Map<string, { price: number; timestamp: number }> = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const WS_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace('http', 'ws') || "ws://localhost:8080";
 
-interface CryptoPriceResponse {
-	symbol: string;
-	price: string;
+interface PriceSnapshot {
+	price: number;
 	timestamp: number;
+	sources: Record<string, number>;
+}
+
+interface WebSocketMessage {
+	price: number;
+	timestamp: number;
+	sources: Record<string, number>;
 }
 
 interface CryptoPriceError {
@@ -20,14 +23,18 @@ interface CryptoPriceError {
 
 export class CryptoApiClient {
 	private static instance: CryptoApiClient;
-	private apiKey: string;
+	private ws: WebSocket | null = null;
+	private reconnectAttempts = 0;
+	private maxReconnectAttempts = 5;
+	private reconnectDelay = 1000; // Start with 1 second
+	private authToken: string | null = null;
+	private priceCallbacks: Set<(price: number) => void> = new Set();
+	private isConnecting = false;
 
 	private constructor() {
-		this.apiKey = API_NINJAS_KEY || "";
-		if (!this.apiKey) {
-			console.warn(
-				"API Ninjas key not found. Please set NEXT_PUBLIC_API_NINJAS_KEY environment variable.",
-			);
+		// Get auth token from cookies if available
+		if (typeof window !== "undefined") {
+			this.authToken = tokenCookies.getAuthToken() || null;
 		}
 	}
 
@@ -38,86 +45,188 @@ export class CryptoApiClient {
 		return CryptoApiClient.instance;
 	}
 
-	private async makeRequest<T>(endpoint: string): Promise<T> {
-		if (!this.apiKey) {
-			throw new Error("API Ninjas key is required");
+	private getWebSocketUrl(): string {
+		const baseUrl = WS_BASE_URL;
+		const token = this.authToken;
+		if (!token) {
+			throw new Error("Authentication token required for WebSocket connection");
 		}
+		return `${baseUrl}/api/ws/btc-price?token=${encodeURIComponent(token)}`;
+	}
 
-		const response = await fetch(`${API_NINJAS_BASE_URL}${endpoint}`, {
-			headers: {
-				"X-Api-Key": this.apiKey,
-				"Content-Type": "application/json",
-			},
+	private connect(): Promise<void> {
+		return new Promise((resolve, reject) => {
+			if (this.isConnecting) {
+				reject(new Error("Connection already in progress"));
+				return;
+			}
+
+			this.isConnecting = true;
+
+			try {
+				const wsUrl = this.getWebSocketUrl();
+				this.ws = new WebSocket(wsUrl);
+
+				this.ws.onopen = () => {
+					console.log("WebSocket connected to BTC price stream");
+					this.isConnecting = false;
+					this.reconnectAttempts = 0;
+					this.reconnectDelay = 1000;
+					resolve();
+				};
+
+				this.ws.onmessage = (event) => {
+					try {
+						const data: WebSocketMessage = JSON.parse(event.data);
+						this.handlePriceUpdate(data.price);
+					} catch (error) {
+						console.error("Error parsing WebSocket message:", error);
+					}
+				};
+
+				this.ws.onclose = (event) => {
+					console.log("WebSocket connection closed:", event.code, event.reason);
+					this.isConnecting = false;
+					this.handleDisconnect();
+				};
+
+				this.ws.onerror = (error) => {
+					console.error("WebSocket error:", error);
+					this.isConnecting = false;
+					reject(new Error("WebSocket connection failed"));
+				};
+
+			} catch (error) {
+				this.isConnecting = false;
+				reject(error);
+			}
 		});
+	}
 
-		if (!response.ok) {
-			const errorData: CryptoPriceError = await response
-				.json()
-				.catch(() => ({ error: "Unknown error" }));
-			throw new Error(
-				errorData.error || `HTTP error! status: ${response.status}`,
-			);
+	private handleDisconnect(): void {
+		if (this.reconnectAttempts < this.maxReconnectAttempts) {
+			this.reconnectAttempts++;
+			console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+			
+			setTimeout(() => {
+				this.connect().catch((error) => {
+					console.error("Reconnection failed:", error);
+				});
+			}, this.reconnectDelay);
+
+			// Exponential backoff
+			this.reconnectDelay = Math.min(this.reconnectDelay * 2, 30000);
+		} else {
+			console.error("Max reconnection attempts reached");
 		}
+	}
 
-		return response.json();
+	private handlePriceUpdate(price: number): void {
+		// Notify all registered callbacks
+		this.priceCallbacks.forEach(callback => {
+			try {
+				callback(price);
+			} catch (error) {
+				console.error("Error in price callback:", error);
+			}
+		});
+	}
+
+	public async ensureConnection(): Promise<void> {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+			await this.connect();
+		}
 	}
 
 	public async getCryptoPrice(symbol: string): Promise<number> {
-		const now = Date.now();
-		const cached = priceCache.get(symbol);
-
-		// Return cached price if it's still valid
-		if (cached && now - cached.timestamp < CACHE_DURATION) {
-			return cached.price;
+		// For now, we only support BTC price
+		if (symbol !== "BTCUSD" && symbol !== "BTC") {
+			throw new Error(`Symbol ${symbol} not supported. Only BTC price is available.`);
 		}
 
-		try {
-			const data: CryptoPriceResponse = await this.makeRequest(
-				`/cryptoprice?symbol=${symbol}`,
-			);
-			const price = parseFloat(data.price);
+		await this.ensureConnection();
 
-			// Cache the result
-			priceCache.set(symbol, { price, timestamp: now });
+		// Return a promise that resolves with the next price update
+		return new Promise((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				reject(new Error("Timeout waiting for price update"));
+			}, 10000); // 10 second timeout
 
-			return price;
-		} catch (error) {
-			console.error(`Failed to fetch price for ${symbol}:`, error);
+			const callback = (price: number) => {
+				clearTimeout(timeout);
+				this.priceCallbacks.delete(callback);
+				resolve(price);
+			};
 
-			// Return cached price if available, even if expired
-			if (cached) {
-				return cached.price;
-			}
-
-			throw error;
-		}
-	}
-
-	public async getAvailableSymbols(): Promise<string[]> {
-		try {
-			const data: { symbols: string[] } =
-				await this.makeRequest("/cryptosymbols");
-			return data.symbols;
-		} catch (error) {
-			console.error("Failed to fetch available symbols:", error);
-			throw error;
-		}
+			this.priceCallbacks.add(callback);
+		});
 	}
 
 	public async getBitcoinPrice(): Promise<number> {
 		return this.getCryptoPrice("BTCUSD");
 	}
 
-	// Clear cache (useful for testing or manual refresh)
-	public clearCache(): void {
-		priceCache.clear();
+	public onPriceUpdate(callback: (price: number) => void): () => void {
+		this.priceCallbacks.add(callback);
+		
+		// Return unsubscribe function
+		return () => {
+			this.priceCallbacks.delete(callback);
+		};
 	}
 
-	// Get cache statistics
+	public async getAvailableSymbols(): Promise<string[]> {
+		// We only support BTC for now
+		return ["BTCUSD", "BTC"];
+	}
+
+	public disconnect(): void {
+		if (this.ws) {
+			this.ws.close();
+			this.ws = null;
+		}
+		this.priceCallbacks.clear();
+		this.reconnectAttempts = 0;
+		this.reconnectDelay = 1000;
+	}
+
+	public setAuthToken(token: string): void {
+		this.authToken = token;
+		// Reconnect with new token if currently connected
+		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+			this.disconnect();
+			this.connect().catch(console.error);
+		}
+	}
+
+	public updateAuthToken(): void {
+		// Update auth token from cookies
+		this.authToken = tokenCookies.getAuthToken() || null;
+		// Reconnect with new token if currently connected
+		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+			this.disconnect();
+			this.connect().catch(console.error);
+		}
+	}
+
+	// Get connection status
+	public getConnectionStatus(): "connecting" | "connected" | "disconnected" | "error" {
+		if (this.isConnecting) return "connecting";
+		if (this.ws && this.ws.readyState === WebSocket.OPEN) return "connected";
+		if (this.ws && this.ws.readyState === WebSocket.CLOSED) return "disconnected";
+		return "error";
+	}
+
+	// Clear cache (no longer needed but kept for compatibility)
+	public clearCache(): void {
+		// No cache in WebSocket implementation
+	}
+
+	// Get cache statistics (no longer needed but kept for compatibility)
 	public getCacheStats(): { size: number; entries: string[] } {
 		return {
-			size: priceCache.size,
-			entries: Array.from(priceCache.keys()),
+			size: 0,
+			entries: [],
 		};
 	}
 }

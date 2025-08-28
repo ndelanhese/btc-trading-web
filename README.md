@@ -14,6 +14,7 @@ A modern, responsive web interface for the BTC Trading Bot that provides compreh
 - **Account Balance**: View total, available, and margin balances
 - **Active Positions**: Manage and monitor all trading positions
 - **Profit/Loss Tracking**: Real-time P&L calculations
+- **Live Bitcoin Price**: Real-time BTC price from multiple exchanges via WebSocket
 
 ### Trading Configuration
 - **Margin Protection**: Configure automatic margin protection settings
@@ -32,16 +33,24 @@ A modern, responsive web interface for the BTC Trading Bot that provides compreh
 - **Position Closing**: Close positions manually
 - **Real-time Updates**: Live position data updates
 
+### Real-time Price Data
+- **WebSocket Connection**: Direct connection to backend's aggregated price feed
+- **Multiple Sources**: Real-time prices from Binance, Coinbase, and Kraken
+- **Automatic Reconnection**: Robust WebSocket connection with exponential backoff
+- **Price Aggregation**: Weighted average from multiple exchange sources
+
 ## 🛠️ Technology Stack
 
 - **Frontend**: Next.js 15 with React 19
 - **Styling**: Tailwind CSS v4
 - **State Management**: Zustand
 - **Forms**: React Hook Form
-- **HTTP Client**: Axios
-- **UI Components**: Headless UI + Heroicons
-- **Notifications**: React Hot Toast
-- **Charts**: Recharts (for future P&L visualization)
+- **HTTP Client**: Ky (lightweight HTTP client)
+- **WebSocket**: Native WebSocket API for real-time data
+- **UI Components**: Radix UI primitives with custom styling
+- **Icons**: Lucide React
+- **Charts**: Recharts for data visualization
+- **Package Manager**: Bun
 
 ## 📦 Installation
 
@@ -54,152 +63,86 @@ cd btc-trading-web
 2. **Install dependencies**
 ```bash
 bun install
-# or
-npm install
 ```
 
 3. **Set up environment variables**
 ```bash
-cp .env.example .env.local
-```
-
-Edit `.env.local`:
-```env
+# Create .env.local file
 NEXT_PUBLIC_API_URL=http://localhost:8080
 ```
 
 4. **Run the development server**
 ```bash
 bun dev
-# or
-npm run dev
 ```
 
-5. **Open your browser**
-Navigate to [http://localhost:3000](http://localhost:3000)
+The application will be available at `http://localhost:3000`.
 
 ## 🔧 Configuration
 
-### API Endpoint
-Set the `NEXT_PUBLIC_API_URL` environment variable to point to your BTC Trading Bot backend:
+### Environment Variables
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8080
-```
+- `NEXT_PUBLIC_API_URL`: Backend API URL (default: http://localhost:8080)
+- `NEXT_PUBLIC_WS_API_URL`: WebSocket API URL (optional, auto-derived from API_URL)
 
-### Backend Requirements
-Make sure your BTC Trading Bot backend is running and accessible at the configured API URL. The web interface expects the following endpoints:
+### WebSocket Configuration
 
-- Authentication: `/api/auth/*`
-- LN Markets Config: `/api/lnmarkets/*`
-- Trading Config: `/api/trading/*`
-- Bot Management: `/api/trading/bot/*`
-- Trading Operations: `/api/trading/*`
+The application automatically connects to the backend's WebSocket endpoint for real-time BTC price data. The WebSocket connection:
 
-## 📱 Usage
+- Uses JWT authentication from secure cookies
+- Automatically reconnects on disconnection
+- Provides real-time price updates from multiple exchanges
+- Falls back to API calls if WebSocket is unavailable
 
-### Getting Started
-1. **Register/Login**: Create an account or sign in with existing credentials
-2. **Configure LN Markets**: Set up your API credentials in the LN Markets tab
-3. **Configure Trading**: Set up your trading parameters in the Configuration tab
-4. **Start Trading**: Use the bot controls to start automated trading
-
-### Dashboard Navigation
-- **Overview**: Main dashboard with bot status, balance, and positions
-- **Configuration**: Trading strategy settings and automation rules
-- **LN Markets**: API credential management
-
-### Key Features
-- **Real-time Updates**: Dashboard refreshes automatically every 30 seconds
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Secure Storage**: API credentials are stored securely
-- **Error Handling**: Comprehensive error messages and validation
-
-## 🎨 UI Components
-
-The interface uses a modern, clean design with:
-- **Card-based Layout**: Organized information in clear sections
-- **Color-coded Status**: Visual indicators for bot status and P&L
-- **Interactive Forms**: Real-time validation and error feedback
-- **Loading States**: Clear feedback during API operations
-- **Toast Notifications**: Success and error messages
-
-## 🔒 Security Features
-
-- **JWT Authentication**: Secure token-based authentication
-- **Password Protection**: API credentials are masked in the UI
-- **HTTPS Support**: Secure communication with the backend
-- **Session Management**: Automatic logout on token expiration
-- **Input Validation**: Client-side and server-side validation
-
-## 📊 Data Visualization
-
-The dashboard provides comprehensive data visualization:
-- **Account Balance Cards**: Color-coded balance information
-- **Position Tables**: Detailed position information with inline editing
-- **Status Indicators**: Visual bot status and health indicators
-- **Real-time Updates**: Live data refresh without page reload
-
-## 🚀 Deployment
-
-### Production Build
-```bash
-bun run build
-bun run start
-```
-
-### Environment Variables for Production
-```env
-NEXT_PUBLIC_API_URL=https://your-backend-domain.com
-```
-
-### Docker Deployment
-```bash
-docker build -t btc-trading-web .
-docker run -p 3000:3000 btc-trading-web
-```
-
-## 🔧 Development
-
-### Project Structure
-```
-src/
-├── app/                 # Next.js app router pages
-├── components/          # React components
-│   ├── auth/           # Authentication components
-│   ├── dashboard/      # Dashboard components
-│   └── ui/             # Reusable UI components
-├── lib/                # Utilities and configurations
-│   ├── api.ts          # API client configuration
-│   └── store.ts        # Zustand state management
-└── styles/             # Global styles
-```
+## 🚀 Development
 
 ### Available Scripts
-- `bun dev`: Start development server
-- `bun build`: Build for production
-- `bun start`: Start production server
-- `bun lint`: Run ESLint
+
+- `bun dev` - Start development server with Turbopack
+- `bun build` - Build for production
+- `bun start` - Start production server
+- `bun lint` - Run linting
+
+### Architecture
+
+The application uses a WebSocket-based approach for real-time BTC price data:
+
+1. **WebSocket Connection**: Connects to `/api/ws/btc-price` endpoint
+2. **Authentication**: Uses JWT tokens from secure cookies
+3. **Price Aggregation**: Receives aggregated prices from multiple exchanges
+4. **Real-time Updates**: Updates UI components with live price data
+5. **Fallback**: Falls back to API calls if WebSocket is unavailable
+
+### Key Components
+
+- `BitcoinPriceDisplay`: Real-time BTC price display with WebSocket connection
+- `useBitcoinPriceWebSocket`: Hook for WebSocket price data
+- `cryptoApi`: WebSocket-based crypto API client
+- `useBitcoinPrice`: Combined hook with WebSocket + API fallback
+
+## 🔒 Security
+
+- JWT-based authentication with secure cookie storage
+- HTTPS/WSS for production deployments
+- CORS configuration for API endpoints
+- Input validation and sanitization
+- Rate limiting on backend API
+
+## 📱 Responsive Design
+
+The interface is fully responsive and works on:
+- Desktop browsers
+- Tablet devices
+- Mobile phones
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
+4. Run tests and linting
 5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## ⚠️ Disclaimer
-
-This software is for educational and research purposes. Trading cryptocurrencies involves significant risk. Use at your own risk and never invest more than you can afford to lose.
-
-## 🆘 Support
-
-For support and questions:
-- Check the [documentation](https://github.com/your-repo/docs)
-- Open an [issue](https://github.com/your-repo/issues)
-- Contact the development team
+This project is licensed under the MIT License.

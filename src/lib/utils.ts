@@ -13,7 +13,7 @@ export async function getBitcoinPrice(): Promise<number> {
 	try {
 		return await cryptoApi.getBitcoinPrice();
 	} catch (error) {
-		toast.error('Failed to fetch Bitcoin price', {
+		toast.error('Failed to fetch Bitcoin price from WebSocket API', {
 			description: error instanceof Error ? error.message : 'Unknown error',
 		});
 		return 0;
